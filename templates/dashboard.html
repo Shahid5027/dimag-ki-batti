@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {% include '_partials/head.html' %}
+  {% set page_title = "Dashboard" %}
+  {% set page_description = "AMCEC Campus Ecosystem — Role-aware command center" %}
+  <style>
+    /* ── Page Layout ── */
+    .page-wrap {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .main-content {
+      flex: 1;
+      padding: var(--space-12) 0 var(--space-20);
+    }
+
+    /* ── Hero ── */
+    .hero {
+      padding: var(--space-16) 0 var(--space-12);
+      border-bottom: 1px solid var(--border);
+      margin-bottom: var(--space-12);
+    }
+    .hero-eyebrow {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      margin-bottom: var(--space-4);
+    }
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: var(--text-display);
+      font-weight: 700;
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+      margin-bottom: var(--space-6);
+      color: var(--foreground);
+    }
+    .hero-title em {
+      font-style: italic;
+      color: var(--accent);
+    }
+    .hero-sub {
+      font-size: var(--text-lg);
+      color: var(--muted-foreground);
+      max-width: 520px;
+      line-height: 1.55;
+    }
+
+    /* ── Stats Row ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-4);
+      margin-bottom: var(--space-12);
+    }
+    @media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) { .stats-grid { grid-template-columns: 1fr; } }
+
+    /* ── Module Grid ── */
+    .section-label {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted-foreground);
+      margin-bottom: var(--space-4);
+    }
+    .modules-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: var(--space-4);
+      margin-bottom: var(--space-12);
+    }
+
+    /* ── Module Card ── */
+    .module-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-8) var(--space-6);
+      text-decoration: none;
+      color: var(--foreground);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 220px;
+      transition: border-color var(--duration-base), box-shadow var(--duration-base), transform var(--duration-base);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+    .module-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--accent);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform var(--duration-base) var(--ease-out);
+    }
+    .module-card:hover {
+      border-color: var(--accent);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+      opacity: 1;
+    }
+    .module-card:hover::before { transform: scaleX(1); }
+
+    .module-icon {
+      font-size: 1.75rem;
+      margin-bottom: var(--space-5);
+      display: block;
+    }
+    .module-title {
+      font-family: var(--font-display);
+      font-size: var(--text-2xl);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: var(--space-2);
+      line-height: 1.1;
+    }
+    .module-desc {
+      font-size: var(--text-sm);
+      color: var(--muted-foreground);
+      line-height: 1.5;
+    }
+    .module-action {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-top: var(--space-6);
+      font-weight: 600;
+    }
+    .module-action::after {
+      content: '→';
+      transition: transform var(--duration-fast);
+    }
+    .module-card:hover .module-action::after { transform: translateX(4px); }
+
+    /* ── Leave form card (faculty) ── */
+    .module-card-form {
+      background: none;
+      border: none;
+      padding: 0;
+      text-align: left;
+      font-family: inherit;
+      width: 100%;
+      cursor: pointer;
+    }
+
+    /* ── Schedule Widget ── */
+    .schedule-section { margin-bottom: var(--space-12); }
+    .schedule-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: var(--space-3);
+    }
+    .schedule-slot {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: var(--space-4);
+    }
+    .schedule-slot.is-current {
+      border-color: var(--accent);
+      background: var(--accent-light);
+    }
+    .schedule-slot.is-free {
+      opacity: 0.55;
+      border-style: dashed;
+    }
+    .slot-time {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted-foreground);
+      margin-bottom: var(--space-2);
+    }
+    .slot-subject {
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--foreground);
+      line-height: 1.4;
+    }
+    .slot-meta {
+      font-size: var(--text-xs);
+      color: var(--muted-foreground);
+      margin-top: var(--space-1);
+    }
+
+    /* ── Flash ── */
+    .flash-wrap { margin-bottom: var(--space-8); }
+  </style>
+</head>
+<body class="page-wrap">
+  {% include '_partials/nav.html' %}
+
+  <main class="main-content" id="main-content">
+    <div class="container">
+
+      {# ── Flash Messages ── #}
+      {% with messages = get_flashed_messages() %}
+      {% if messages %}
+      <div class="flash-wrap">
+        <div class="flash-alert flash-alert--info" role="alert">
+          {{ messages[0] }}
+        </div>
+      </div>
+      {% endif %}
+      {% endwith %}
+
+      {# ── Hero Greeting ── #}
+      <section class="hero reveal">
+        <p class="hero-eyebrow">
+          {{ session.get('role', 'guest') | capitalize }} Dashboard · AMC Engineering College
+        </p>
+        {% set role = session.get('role', 'guest') %}
+        {% if role == 'admin' %}
+          <h1 class="hero-title">Admin<br><em>Command</em><br>Center.</h1>
+          <p class="hero-sub">Full system access — attendance logs, faculty leaves, and campus analytics in one view.</p>
+        {% elif role == 'faculty' %}
+          <h1 class="hero-title">Teach.<br><em>Inspire.</em><br>Lead.</h1>
+          <p class="hero-sub">Generate QR codes, view attendance reports, and manage your classroom — all from one place.</p>
+        {% elif role == 'student' %}
+          <h1 class="hero-title">Your<br><em>Learning</em><br>Portal.</h1>
+          <p class="hero-sub">Track your attendance, study smarter with AI, and access peer notes — all in one place.</p>
+        {% else %}
+          <h1 class="hero-title">Welcome<br>to the<br><em>Ecosystem.</em></h1>
+          <p class="hero-sub">AMC Engineering College — Integrated Campus Platform</p>
+        {% endif %}
+      </section>
+
+      {# ── Stat Cards ── #}
+      <div class="stats-grid">
+        {% if role == 'student' %}
+        <div class="stat-card stat-accent reveal">
+          <span class="stat-label">Attendance</span>
+          <span class="stat-value">—</span>
+          <span class="stat-sub">Tap "My Attendance" to view</span>
+        </div>
+        <div class="stat-card reveal">
+          <span class="stat-label">Today's Classes</span>
+          <span class="stat-value">6</span>
+          <span class="stat-sub">View schedule below</span>
+        </div>
+        <div class="stat-card reveal">
+          <span class="stat-label">Study Sessions</span>
+          <span class="stat-value">AI</span>
+          <span class="stat-sub">Concept Chef available</span>
+        </div>
+        <div class="stat-card reveal">
+          <span class="stat-label">Notes Access</span>
+          <span class="stat-value">Open</span>
+          <span class="stat-sub">Peer repository active</span>
+        </div>
+        {% elif role == 'faculty' %}
+        <div class="stat-card stat-accent reveal">
+          <span class="stat-label">Today's Schedule</span>
+          <span class="stat-value">3</span>
+          <span class="stat-sub">Classes assigned today</span>
+        </div>
+        <div class="stat-card reveal">
+          <span class="stat-label">QR Attendance</span>
+          <span class="stat-value">Ready</span>
+          <span class="stat-sub">Generate at any time</span>
+        </div>
+        <div class="stat-card reveal">
+          <span class="stat-label">Leave Status</span>
+          <span class="stat-value">—</span>
+          <span class="stat-sub">No leave marked today</span>
+        </div>
+        <div class="stat-card reveal">
+          <span class="stat-label">Notes</span>
+          <span class="stat-value">Open</span>
+          <span class="stat-sub">Upload or browse</span>
+        </div>
+        {% elif role == 'admin' %}
+        <div class="stat-card stat-accent reveal">
+          <span class="stat-label">System Status</span>
+          <span class="stat-value">Live</span>
+          <span class="stat-sub">All nodes operational</span>
+        </div>
+        <div class="stat-card reveal">
+          <span class="stat-label">Attendance Logs</span>
+          <span class="stat-value">→</span>
+          <span class="stat-sub">View in Admin Panel</span>
+        </div>
+        <div class="stat-card reveal">
+          <span class="stat-label">Faculty Leaves</span>
+          <span class="stat-value">→</span>
+          <span class="stat-sub">View in Admin Panel</span>
+        </div>
+        <div class="stat-card reveal">
+          <span class="stat-label">Access Level</span>
+          <span class="stat-value">Full</span>
+          <span class="stat-sub">All modules unlocked</span>
+        </div>
+        {% endif %}
+      </div>
+
+      {# ── Module Quick-Access ── #}
+      <p class="section-label">Quick Access</p>
+      <div class="modules-grid">
+
+        {% if session.get('role') in ['admin', 'faculty'] %}
+        <a href="/attendance/generate" class="module-card reveal" aria-label="Generate QR attendance code">
+          <span class="module-icon">⬡</span>
+          <div>
+            <h2 class="module-title">Attendance QR</h2>
+            <p class="module-desc">Generate a rolling QR code for live classroom check-in. Auto-expires every {{ 5 }} seconds.</p>
+          </div>
+          <span class="module-action">Generate QR</span>
+        </a>
+        {% endif %}
+
+        {% if session.get('role') == 'faculty' %}
+        <a href="/attendance/faculty" class="module-card reveal" aria-label="View attendance report">
+          <span class="module-icon">◈</span>
+          <div>
+            <h2 class="module-title">Attendance Report</h2>
+            <p class="module-desc">See how many students are present per session, and each student's cumulative attendance percentage.</p>
+          </div>
+          <span class="module-action">View Report</span>
+        </a>
+        {% endif %}
+
+
+
+        {% if session.get('role') == 'admin' %}
+        <a href="/attendance/admin" class="module-card reveal" aria-label="Admin panel">
+          <span class="module-icon">◈</span>
+          <div>
+            <h2 class="module-title" style="color:var(--warning)">Admin Panel</h2>
+            <p class="module-desc">View all attendance logs, faculty leaves, and campus-wide session records.</p>
+          </div>
+          <span class="module-action" style="color:var(--warning)">Open Panel</span>
+        </a>
+        {% endif %}
+
+        {% if session.get('role') == 'student' %}
+        <a href="/attendance/" class="module-card reveal" aria-label="View my attendance">
+          <span class="module-icon">⬡</span>
+          <div>
+            <h2 class="module-title">My Attendance</h2>
+            <p class="module-desc">View your complete session-by-session attendance history and check-in timestamps.</p>
+          </div>
+          <span class="module-action">View Records</span>
+        </a>
+        {% endif %}
+
+        {% if session.get('role') in ['admin', 'student'] %}
+        <a href="/study/" class="module-card reveal" aria-label="Open AI Study module">
+          <span class="module-icon">◎</span>
+          <div>
+            <h2 class="module-title">Study AI</h2>
+            <p class="module-desc">Paste a YouTube link or PDF — get summaries, mind maps, quizzes, and an AI tutor in seconds.</p>
+          </div>
+          <span class="module-action">Launch Study AI</span>
+        </a>
+        {% endif %}
+
+        {# Notes Hub — available to all #}
+        <a href="/notes" class="module-card reveal" aria-label="Browse the notes repository">
+          <span class="module-icon">▣</span>
+          <div>
+            <h2 class="module-title">Notes Hub</h2>
+            <p class="module-desc">Browse and download faculty-uploaded PDFs filtered by subject and semester.</p>
+          </div>
+          <span class="module-action">Browse PDFs</span>
+        </a>
+
+        {# Take Leave — faculty only, placed last #}
+        {% if session.get('role') == 'faculty' %}
+        <form action="/attendance/take_leave" method="POST" style="display:contents">
+          <button type="submit" class="module-card reveal" aria-label="Mark leave for today">
+            <span class="module-icon">◻</span>
+            <div>
+              <h2 class="module-title" style="color:var(--destructive)">Take Leave</h2>
+              <p class="module-desc">Mark yourself as on leave for today. This will be visible to students and admin.</p>
+            </div>
+            <span class="module-action" style="color:var(--destructive)">Submit Leave</span>
+          </button>
+        </form>
+        {% endif %}
+
+      </div>
+
+      {# ── Timetable ── #}
+      {% if session.get('role') in ['student', 'faculty'] %}
+      <section class="schedule-section reveal">
+
+        {% if session.get('role') == 'faculty' %}
+        {# ── Faculty: Period-based weekly grid (Miss Uzma Paracha style) ── #}
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--space-4);">
+          <p class="section-label" style="margin:0;">Weekly Timetable</p>
+          <span class="badge badge--default" style="font-family:var(--font-mono);">Miss Uzma Paracha</span>
+        </div>
+        <div class="card" style="padding:0; overflow-x:auto;">
+          <table style="width:100%; border-collapse:collapse; min-width:700px; font-size:var(--text-sm);">
+            <thead>
+              <tr style="background:var(--muted);">
+                <th style="padding:var(--space-3) var(--space-4); text-align:left; font-family:var(--font-mono); font-size:var(--text-xs); text-transform:uppercase; letter-spacing:0.08em; border-bottom:1px solid var(--border); border-right:1px solid var(--border); min-width:90px;">Days</th>
+                {% for p in ['1st Period','2nd Period','3rd Period','4th Period','5th Period','6th Period','7th Period','8th Period'] %}
+                <th style="padding:var(--space-3) var(--space-2); text-align:center; font-family:var(--font-mono); font-size:var(--text-xs); text-transform:uppercase; letter-spacing:0.06em; border-bottom:1px solid var(--border); border-right:1px solid var(--border); white-space:nowrap;">{{ p }}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% set faculty_tt = {
+                'Monday':    ['','','VII-O','VII-O','','','',''],
+                'Tuesday':   ['','','VI-O','VI-O','','','','IX-O'],
+                'Wednesday': ['','VIII-O','','VI-O','','IX-O','IX-O',''],
+                'Thursday':  ['','','','VII-O','','','',''],
+                'Friday':    ['','','','','VIII-O','VIII-O','IX-O','IX-O']
+              } %}
+              {% for day, periods in faculty_tt.items() %}
+              <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:var(--space-3) var(--space-4); font-weight:600; border-right:1px solid var(--border); white-space:nowrap;">{{ day }}</td>
+                {% for cell in periods %}
+                <td style="padding:var(--space-3) var(--space-2); text-align:center; border-right:1px solid var(--border);">
+                  {% if cell %}
+                  <span style="font-family:var(--font-mono); font-size:var(--text-xs); font-weight:600; color:var(--accent); background:var(--accent-light); padding:2px 8px; border-radius:4px;">{{ cell }}</span>
+                  {% endif %}
+                </td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% elif session.get('role') == 'student' %}
+        {# ── Student: Time-slot grid with breaks ── #}
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--space-4);">
+          <p class="section-label" style="margin:0;">Weekly Timetable</p>
+          <span class="badge badge--default" style="font-family:var(--font-mono);">4th Sem · EC · 2024</span>
+        </div>
+        <div class="card" style="padding:0; overflow-x:auto;">
+          <table style="width:100%; border-collapse:collapse; min-width:900px; font-size:var(--text-xs);">
+            <thead>
+              <tr style="background:var(--muted);">
+                <th style="padding:var(--space-3) var(--space-3); text-align:left; font-family:var(--font-mono); font-size:var(--text-xs); text-transform:uppercase; letter-spacing:0.06em; border-bottom:1px solid var(--border); border-right:1px solid var(--border); min-width:72px;">Day</th>
+                <th style="padding:var(--space-3) var(--space-2); text-align:center; border-bottom:1px solid var(--border); border-right:1px solid var(--border); white-space:nowrap; font-family:var(--font-mono); font-size:10px;">9:15–10:10</th>
+                <th style="padding:var(--space-3) var(--space-2); text-align:center; border-bottom:1px solid var(--border); border-right:1px solid var(--border); white-space:nowrap; font-family:var(--font-mono); font-size:10px;">10:10–11:05</th>
+                <th style="padding:var(--space-2); text-align:center; border-bottom:1px solid var(--border); border-right:1px solid var(--border); white-space:nowrap; font-family:var(--font-mono); font-size:10px; background:var(--warning-light); color:var(--warning);">11:05–11:20<br><span style="font-size:9px;">Short Break</span></th>
+                <th style="padding:var(--space-3) var(--space-2); text-align:center; border-bottom:1px solid var(--border); border-right:1px solid var(--border); white-space:nowrap; font-family:var(--font-mono); font-size:10px;">11:20–12:15</th>
+                <th style="padding:var(--space-3) var(--space-2); text-align:center; border-bottom:1px solid var(--border); border-right:1px solid var(--border); white-space:nowrap; font-family:var(--font-mono); font-size:10px;">12:15–1:10</th>
+                <th style="padding:var(--space-3) var(--space-2); text-align:center; border-bottom:1px solid var(--border); border-right:1px solid var(--border); white-space:nowrap; font-family:var(--font-mono); font-size:10px;">1:10–2:00</th>
+                <th style="padding:var(--space-2); text-align:center; border-bottom:1px solid var(--border); border-right:1px solid var(--border); white-space:nowrap; font-family:var(--font-mono); font-size:10px; background:var(--warning-light); color:var(--warning);">2:00–2:55<br><span style="font-size:9px;">Lunch</span></th>
+                <th style="padding:var(--space-3) var(--space-2); text-align:center; border-bottom:1px solid var(--border); border-right:1px solid var(--border); white-space:nowrap; font-family:var(--font-mono); font-size:10px;">2:55–3:50</th>
+                <th style="padding:var(--space-3) var(--space-2); text-align:center; border-bottom:1px solid var(--border); border-right:1px solid var(--border); white-space:nowrap; font-family:var(--font-mono); font-size:10px;">3:50–4:45</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% set SB = '<span style="color:var(--warning);font-size:9px;">Break</span>' %}
+              {% set LB = '<span style="color:var(--warning);font-size:9px;">Lunch</span>' %}
+              {% set student_tt = [
+                ('MON',  'BEC402-PCS Lab(C1)/BEC L403-CS(C2)', 'BEC402-PCS Lab(C1)/BEC L403-CS(C2)', 'SB', 'BEC401-ET', 'BEC402-PCS', 'BEC402-PCS', 'LB', 'BEC403-CS', 'BEC407-BE'),
+                ('TUE',  'BEC401-ET', 'BEC403-CS', 'SB', 'BEC405A-MC', 'BUHK408-UHV', 'BEC402-PCS', 'LB', '', ''),
+                ('WED',  'BEC402-PCS Lab(C2)/BEC L403-CS(C1)', 'BEC402-PCS Lab(C2)/BEC L403-CS(C1)', 'SB', 'BEC401-ET', 'BBOK407-BE', 'BEC402-PCS', 'LB', 'BEC404-CL Lab(C1)/BEC456A-Microcontroller Lab(C1)', 'BEC404-CL Lab(C1)/BEC456A-Microcontroller Lab(C1)'),
+                ('THUR', 'BBOK407-BE', 'BEC405A-MC', 'SB', 'BEC403-CS', 'BEC402-PCS', 'BEC402-PCS', 'LB', '', ''),
+                ('FRI',  '', '', 'SB', 'BEC405A-MC', 'BEC402-PCS', '', 'LB', 'NSS/Yoga/PE', 'NSS/Yoga/PE'),
+                ('SAT',  'REMEDIAL CLASS', 'REMEDIAL CLASS', 'SB', 'REMEDIAL CLASS', 'REMEDIAL CLASS', 'REMEDIAL CLASS', 'LB', 'REMEDIAL CLASS', 'REMEDIAL CLASS'),
+              ] %}
+              {% for row in student_tt %}
+              <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:var(--space-3); font-weight:700; font-family:var(--font-mono); font-size:var(--text-xs); border-right:1px solid var(--border);">{{ row[0] }}</td>
+                {% for i in range(1, 10) %}
+                {% set cell = row[i] %}
+                {% if cell == 'SB' %}
+                <td style="padding:var(--space-2); text-align:center; border-right:1px solid var(--border); background:oklch(0.65 0.175 75 / 0.08);">
+                  <span style="font-family:var(--font-mono); font-size:9px; color:var(--warning);">Break</span>
+                </td>
+                {% elif cell == 'LB' %}
+                <td style="padding:var(--space-2); text-align:center; border-right:1px solid var(--border); background:oklch(0.65 0.175 75 / 0.08);">
+                  <span style="font-family:var(--font-mono); font-size:9px; color:var(--warning);">Lunch</span>
+                </td>
+                {% elif cell == 'REMEDIAL CLASS' %}
+                <td style="padding:var(--space-2); text-align:center; border-right:1px solid var(--border); background:var(--muted);">
+                  <span style="font-family:var(--font-mono); font-size:9px; color:var(--muted-foreground); font-weight:600;">REMEDIAL</span>
+                </td>
+                {% elif cell %}
+                <td style="padding:var(--space-2); text-align:center; border-right:1px solid var(--border);">
+                  <span style="font-family:var(--font-mono); font-size:9px; font-weight:600; color:var(--accent); line-height:1.4; display:block;">{{ cell }}</span>
+                </td>
+                {% else %}
+                <td style="padding:var(--space-2); border-right:1px solid var(--border);"></td>
+                {% endif %}
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endif %}
+
+      </section>
+      {% endif %}
+
+
+    </div>
+  </main>
+
+  <footer style="border-top:1px solid var(--border); padding:var(--space-8) 0; text-align:center;">
+    <p style="font-family:var(--font-mono);font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.08em;color:var(--muted-foreground)">
+      AMC Engineering College · Dept. of ECE · Built by Team RAGE
+    </p>
+  </footer>
+
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+  <script src="{{ url_for('static', filename='js/toast.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/animations.js') }}"></script>
+</body>
+</html>

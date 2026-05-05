@@ -1,1 +1,0 @@
-# dimag-ki-batti

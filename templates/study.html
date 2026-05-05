@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {% include '_partials/head.html' %}
+  {% set page_title = "Study AI" %}
+  <style>
+    /* ── Layout ── */
+    body {
+      overflow: hidden; /* App-like feel */
+    }
+    .app-layout {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .app-sidebar {
+      width: 260px;
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 20;
+    }
+    .app-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+    .app-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--space-8);
+      scroll-behavior: smooth;
+    }
+    
+    /* ── Sidebar Nav ── */
+    .app-brand {
+      padding: var(--space-6) var(--space-6);
+      border-bottom: 1px solid var(--border);
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: var(--text-xl);
+      color: var(--foreground);
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+    .app-brand-icon {
+      color: var(--accent);
+    }
+    .app-nav {
+      padding: var(--space-4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+    .app-nav-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-md);
+      font-family: var(--font-sans);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--muted-foreground);
+      text-decoration: none;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      text-align: left;
+      transition: all var(--duration-fast);
+    }
+    .app-nav-btn:hover {
+      background: var(--muted);
+      color: var(--foreground);
+    }
+    .app-nav-btn.active {
+      background: var(--accent-light);
+      color: var(--accent);
+    }
+    
+    /* ── Header ── */
+    .app-header {
+      height: var(--nav-h);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--space-8);
+      background: var(--background);
+      z-index: 10;
+    }
+    
+    /* ── Sections ── */
+    .section-wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      padding-bottom: var(--space-20);
+    }
+    
+    /* ── Inputs ── */
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
+    
+    /* ── Mix View ── */
+    .mix-layout {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: var(--space-8);
+      align-items: start;
+    }
+    .media-box {
+      background: var(--primary);
+      aspect-ratio: 16/9;
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      margin-bottom: var(--space-6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary-foreground);
+    }
+    
+    /* ── X-Ray ── */
+    .xray-header {
+      position: sticky;
+      top: 0;
+      background: var(--background);
+      padding: var(--space-4) 0;
+      z-index: 5;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: var(--space-6);
+    }
+    
+    /* ── Quiz ── */
+    .quiz-card {
+      margin-bottom: var(--space-6);
+    }
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      margin-top: var(--space-4);
+    }
+    .quiz-option {
+      text-align: left;
+      padding: var(--space-4);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--muted);
+      color: var(--foreground);
+      cursor: pointer;
+      font-size: var(--text-base);
+      font-family: var(--font-sans);
+      width: 100%;
+      transition: all var(--duration-fast);
+    }
+    .quiz-option:hover {
+      background: var(--muted);
+    }
+    .quiz-option.correct {
+      background: var(--success-light);
+      border-color: var(--success);
+      color: var(--success);
+    }
+    .quiz-option.incorrect {
+      background: var(--destructive-light);
+      border-color: var(--destructive);
+      color: var(--destructive);
+    }
+    .quiz-option:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .cloze-input {
+      border: none;
+      border-bottom: 2px solid var(--accent);
+      background: transparent;
+      color: var(--accent);
+      font-weight: 700;
+      text-align: center;
+      outline: none;
+      width: 120px;
+      font-size: inherit;
+    }
+    .cloze-input.correct {
+      border-color: var(--success);
+      color: var(--success);
+    }
+    .cloze-input.incorrect {
+      border-color: var(--destructive);
+      color: var(--destructive);
+    }
+    
+    /* ── Chat Widget ── */
+    .chat-toggle {
+      position: fixed;
+      bottom: var(--space-6);
+      right: var(--space-6);
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: var(--primary-foreground);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      box-shadow: var(--shadow-lg);
+      cursor: pointer;
+      border: none;
+      z-index: 100;
+      transition: transform var(--duration-fast);
+    }
+    .chat-toggle:hover {
+      transform: scale(1.05);
+    }
+    .chat-window {
+      position: fixed;
+      bottom: calc(var(--space-6) + 80px);
+      right: var(--space-6);
+      width: 380px;
+      height: 600px;
+      max-height: 80vh;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(20px);
+      transition: all var(--duration-base) var(--ease-out);
+      overflow: hidden;
+    }
+    .chat-window.open {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+    .chat-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+    .chat-tab {
+      flex: 1;
+      padding: var(--space-4);
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--muted);
+      color: var(--muted-foreground);
+      border: none;
+      border-bottom: 2px solid transparent;
+    }
+    .chat-tab.active {
+      background: var(--card);
+      color: var(--foreground);
+      border-bottom-color: var(--accent);
+    }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--space-4);
+    }
+    .chat-form {
+      padding: var(--space-3);
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: var(--space-2);
+      background: var(--background);
+    }
+    
+    @media (max-width: 768px) {
+      .app-sidebar { display: none; }
+      .mix-layout { grid-template-columns: 1fr; }
+      .chat-window { width: calc(100vw - var(--space-8)); right: var(--space-4); bottom: 90px; }
+      .mobile-back-bar { display: flex !important; }
+    }
+    .mobile-back-bar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-3) var(--space-4);
+      border-bottom: 1px solid var(--border);
+      background: var(--card);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+  </style>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
+    window.renderMermaid = async (graph) => {
+      const el = document.querySelector('#mermaid-graph');
+      el.innerHTML = ''; 
+      try { 
+          const { svg } = await mermaid.render('graphDiv', graph); 
+          el.innerHTML = svg; 
+      } 
+      catch (e) { 
+          el.innerHTML = '<div class="flash-alert flash-alert--error">Map Syntax Error: Generated invalid graph structure.</div>'; 
+      }
+    };
+  </script>
+</head>
+<body>
+
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="app-sidebar">
+      <div class="app-brand">
+        <span class="app-brand-icon">❖</span> Concept Chef
+      </div>
+      <nav class="app-nav">
+        <button onclick="showSection('dashboard')" id="nav-dashboard" class="app-nav-btn active">
+          ⌂ Dashboard
+        </button>
+        <button onclick="showSection('mix')" id="nav-mix" class="app-nav-btn">
+          ▤ The Mix
+        </button>
+        <button onclick="showSection('xray')" id="nav-xray" class="app-nav-btn">
+          ◧ X-Ray Mode
+        </button>
+        <button onclick="showSection('map')" id="nav-map" class="app-nav-btn">
+          ⎈ Mind Map
+        </button>
+        <button onclick="showSection('quiz')" id="nav-quiz" class="app-nav-btn">
+          ★ Quiz Arena
+        </button>
+      </nav>
+      <div style="margin-top: auto; padding: var(--space-4);">
+        <a href="/" class="btn btn--ghost" style="width: 100%; justify-content: flex-start;">
+          ← Back to Campus
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="app-main">
+      <!-- Mobile back bar (only visible on small screens) -->
+      <div class="mobile-back-bar">
+        <a href="/" class="btn btn--ghost btn--sm">← Dashboard</a>
+        <span style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--muted-foreground);">Study AI</span>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">◑</button>
+      </div>
+
+      <header class="app-header">
+        <div style="display:flex; align-items:center; gap:var(--space-4);">
+          <a href="/" class="btn btn--ghost btn--sm" style="white-space:nowrap;">← Dashboard</a>
+          <div style="font-family:var(--font-mono);font-size:var(--text-xs);letter-spacing:0.08em;color:var(--muted-foreground);">
+            Study Module / <span id="header-title" style="color:var(--foreground);">Dashboard</span>
+          </div>
+        </div>
+        <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">◑</button>
+      </header>
+      
+      <div class="app-content">
+        
+        <!-- Dashboard Section -->
+        <section id="section-dashboard" class="section-wrap reveal visible">
+          <div style="text-align:center; margin-bottom:var(--space-12);">
+            <h2 style="font-size:var(--text-display); line-height:1; margin-bottom:var(--space-4);">Study <em class="text-accent">Mastery.</em></h2>
+            <p class="text-muted" style="font-size:var(--text-lg)">Upload your source material. We handle the rest.</p>
+          </div>
+          
+          <div class="card">
+            <!-- Tabs -->
+            <div class="tabs" style="margin-bottom:var(--space-6);">
+              <button class="tab-btn active" id="tab-btn-youtube" onclick="switchTab('youtube')" style="flex:1">YouTube</button>
+              <button class="tab-btn" id="tab-btn-pdf" onclick="switchTab('pdf')" style="flex:1">PDF</button>
+              <button class="tab-btn" id="tab-btn-text" onclick="switchTab('text')" style="flex:1">Text</button>
+              <button class="tab-btn" id="tab-btn-gemini" onclick="switchTab('gemini')" style="flex:1">Gemini</button>
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Persona</label>
+                <select id="global-persona" class="select">
+                  <option value="Strict Examiner">Strict Examiner</option>
+                  <option value="Standard Tutor">Standard Tutor</option>
+                  <option value="Explain Like I'm 5">Explain Like I'm 5</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Questions</label>
+                <input id="global-qcount" type="number" value="5" class="input">
+              </div>
+            </div>
+            
+            <!-- YouTube Form -->
+            <form id="form-youtube" onsubmit="handleForm(event)">
+              <input type="hidden" name="source_type" value="youtube">
+              <div class="form-group" style="margin-bottom:var(--space-6);">
+                <input name="url" type="url" class="input" placeholder="Paste YouTube Link here..." required style="padding:var(--space-4); font-size:var(--text-lg);">
+              </div>
+              <div class="flex gap-4">
+                <button type="submit" onclick="setMode('standard')" class="btn btn--primary" style="flex:1; padding:var(--space-4);">Standard Mix</button>
+                <button type="submit" onclick="setMode('layered')" class="btn btn--muted" style="flex:1; padding:var(--space-4);">X-Ray Mode</button>
+              </div>
+            </form>
+            
+            <!-- PDF Form -->
+            <form id="form-pdf" class="hidden" onsubmit="handleForm(event)">
+              <input type="hidden" name="source_type" value="pdf">
+              <div class="drop-zone" style="margin-bottom:var(--space-6);">
+                <input name="file" type="file" accept=".pdf" style="position:absolute; opacity:0; width:100%; height:100%; top:0; left:0; cursor:pointer;" required>
+                <div class="drop-zone-icon">⇪</div>
+                <div class="drop-zone-text">Click or drag to Upload PDF</div>
+              </div>
+              <div class="flex gap-4">
+                <button type="submit" onclick="setMode('standard')" class="btn btn--primary" style="flex:1; padding:var(--space-4);">Standard Mix</button>
+                <button type="submit" onclick="setMode('layered')" class="btn btn--muted" style="flex:1; padding:var(--space-4);">X-Ray Mode</button>
+              </div>
+            </form>
+            
+            <!-- Text Form -->
+            <form id="form-text" class="hidden" onsubmit="handleForm(event)">
+              <input type="hidden" name="source_type" value="text">
+              <div class="form-group" style="margin-bottom:var(--space-6);">
+                <textarea name="text_content" class="textarea" placeholder="Paste your notes here..." required></textarea>
+              </div>
+              <div class="flex gap-4">
+                <button type="submit" onclick="setMode('standard')" class="btn btn--primary" style="flex:1; padding:var(--space-4);">Standard Mix</button>
+                <button type="submit" onclick="setMode('layered')" class="btn btn--muted" style="flex:1; padding:var(--space-4);">X-Ray Mode</button>
+              </div>
+            </form>
+            
+            <!-- Gemini Form -->
+            <form id="form-gemini" class="hidden" onsubmit="handleForm(event)">
+              <input type="hidden" name="source_type" value="gemini">
+              <div class="flash-alert flash-alert--info">Tip: Copy conversation from Gemini and paste below.</div>
+              <div class="form-group" style="margin-bottom:var(--space-6);">
+                <textarea name="text_content" class="textarea" placeholder="User: ... AI: ..." required style="font-family:var(--font-mono);"></textarea>
+              </div>
+              <div class="flex gap-4">
+                <button type="submit" onclick="setMode('standard')" class="btn btn--primary" style="flex:1; padding:var(--space-4);">Standard Mix</button>
+                <button type="submit" onclick="setMode('layered')" class="btn btn--muted" style="flex:1; padding:var(--space-4);">X-Ray Mode</button>
+              </div>
+            </form>
+            
+            <!-- Loader -->
+            <div id="loader" class="loader-wrap hidden">
+              <div class="spinner"></div>
+              <div class="loader-text">Cooking Concepts...</div>
+            </div>
+            
+          </div>
+        </section>
+
+        <!-- Mix Section -->
+        <section id="section-mix" class="section-wrap hidden">
+          <div class="mix-layout">
+            <div>
+              <div id="media-box" class="media-box">
+                Media Content
+              </div>
+              <div class="card">
+                <h3 class="card-title" style="margin-bottom:var(--space-4);">Summary</h3>
+                <ul id="summary-list" style="padding-left:var(--space-5); color:var(--muted-foreground); line-height:1.7;"></ul>
+              </div>
+            </div>
+            <div class="flex flex-col gap-6">
+              <div class="card" style="background:var(--accent-light); border-color:var(--accent-light);">
+                <h4 id="analogy-title" class="text-accent" style="margin-bottom:var(--space-2);">Analogy</h4>
+                <p id="analogy-content" style="color:var(--foreground); font-size:var(--text-sm);"></p>
+              </div>
+              <button onclick="showSection('map')" class="btn btn--muted btn--lg w-full">View Mind Map</button>
+              <button onclick="showSection('quiz')" class="btn btn--primary btn--lg w-full">Enter Quiz Arena</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- X-Ray Section -->
+        <section id="section-xray" class="section-wrap hidden">
+          <div class="xray-header card">
+            <h2 class="card-title">X-Ray Mode</h2>
+            <input type="range" min="1" max="4" value="1" id="xray-slider" style="width:100%; margin-top:var(--space-4); cursor:pointer;" oninput="renderXRay(this.value)">
+            <div style="display:flex; justify-content:space-between; margin-top:var(--space-2); font-family:var(--font-mono); font-size:var(--text-xs); color:var(--muted-foreground); text-transform:uppercase;">
+              <span>1. Skeleton</span>
+              <span>2. Structure</span>
+              <span>3. Logic</span>
+              <span>4. Mastery</span>
+            </div>
+          </div>
+          <div id="xray-content" class="flex flex-col gap-6"></div>
+        </section>
+
+        <!-- Map Section -->
+        <section id="section-map" class="section-wrap hidden">
+          <div class="card" style="min-height: 500px; display:flex; justify-content:center;">
+            <div id="mermaid-graph" style="width:100%;"></div>
+          </div>
+        </section>
+
+        <!-- Quiz Section -->
+        <section id="section-quiz" class="section-wrap hidden">
+          <div style="text-align:center; margin-bottom:var(--space-8);">
+            <span class="badge badge--success">Active Recall Protocol</span>
+            <h2 style="margin-top:var(--space-2);">Quiz Arena</h2>
+          </div>
+          <div id="quiz-container"></div>
+        </section>
+
+      </div>
+    </main>
+
+    <!-- Chat Widget -->
+    <button class="chat-toggle" onclick="toggleChat()">💬</button>
+    <div class="chat-window" id="chat-window">
+      <div class="chat-tabs">
+        <button class="chat-tab active" id="chat-tab-tutor" onclick="setChatMode('tutor')">Tutor</button>
+        <button class="chat-tab" id="chat-tab-examiner" onclick="setChatMode('examiner')">Examiner</button>
+      </div>
+      <div class="chat-messages" id="chat-msgs">
+        <div style="text-align:center; font-family:var(--font-mono); font-size:var(--text-xs); color:var(--muted-foreground); margin-top:var(--space-4);">AI Ready.</div>
+      </div>
+      <form class="chat-form" onsubmit="sendChat(event)">
+        <button type="button" id="voice-btn" class="btn btn--muted" onclick="toggleVoice()">🎤</button>
+        <input type="text" id="chat-in" class="input" placeholder="Type..." autocomplete="off">
+        <button type="submit" id="chat-submit-btn" class="btn btn--primary">↑</button>
+      </form>
+    </div>
+
+  </div>
+
+  <script src="{{ url_for('static', filename='js/animations.js') }}"></script>
+  <script>
+    /* ── Theme Toggle override if needed ── */
+    const themeBtn = document.getElementById('theme-toggle');
+    if (themeBtn) {
+      themeBtn.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+      });
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+    }
+
+    let sessId = null;
+    let chatMode = 'tutor';
+    let currentGenMode = 'standard';
+    let xrayData = null;
+
+    const fmt = (t) => t ? t.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>') : '';
+
+    function showSection(id) {
+      ['dashboard','xray','mix','quiz','map'].forEach(s => {
+        const el = document.getElementById(`section-${s}`);
+        if(el) el.classList.add('hidden');
+        const nav = document.getElementById(`nav-${s}`);
+        if(nav) nav.classList.remove('active');
+      });
+      document.getElementById(`section-${id}`).classList.remove('hidden');
+      document.getElementById(`section-${id}`).classList.add('reveal', 'visible');
+      const activeNav = document.getElementById(`nav-${id}`);
+      if(activeNav) activeNav.classList.add('active');
+      
+      const titles = { dashboard: 'Dashboard', mix: 'The Mix', xray: 'X-Ray Mode', quiz: 'Quiz Arena', map: 'Mind Map' };
+      document.getElementById('header-title').innerText = titles[id] || '';
+    }
+    window.showSection = showSection;
+
+    function switchTab(t) {
+      ['youtube','pdf','text','gemini'].forEach(x => {
+        document.getElementById(`form-${x}`).classList.add('hidden');
+        document.getElementById(`tab-btn-${x}`).classList.remove('active');
+      });
+      document.getElementById(`form-${t}`).classList.remove('hidden');
+      document.getElementById(`tab-btn-${t}`).classList.add('active');
+    }
+    window.switchTab = switchTab;
+
+    function setMode(m) { currentGenMode = m; }
+    window.setMode = setMode;
+
+    async function handleForm(e) {
+      e.preventDefault();
+      document.getElementById('loader').classList.remove('hidden');
+      const fd = new FormData(e.target);
+      fd.append('style', document.getElementById('global-persona').value);
+      fd.append('q_count', document.getElementById('global-qcount').value);
+      fd.append('gen_mode', currentGenMode);
+
+      try {
+        const res = await fetch('/study/generate', {method:'POST', body:fd});
+        const d = await res.json();
+        
+        if(d.status === 'success') {
+          sessId = d.session_id;
+          if(d.mode === 'layered') { 
+            xrayData = d.data; 
+            renderXRay(1); 
+            showSection('xray'); 
+          } else { 
+            renderMix(d.data, d.video_id); 
+            showSection('mix'); 
+          }
+        } else { 
+          alert("Error: " + d.message); 
+        }
+      } catch(err) { 
+        alert("Server Error: " + err.message); 
+      } finally { 
+        document.getElementById('loader').classList.add('hidden'); 
+      }
+    }
+    window.handleForm = handleForm;
+
+    function renderMix(d, vid) {
+      document.getElementById('summary-list').innerHTML = d.summary.map(s=>`<li style="margin-bottom:var(--space-2)">${fmt(s)}</li>`).join('');
+      document.getElementById('analogy-title').innerText = d.analogy_title || "Analogy";
+      document.getElementById('analogy-content').innerHTML = fmt(d.analogy_content);
+      
+      if(d.mind_map && window.renderMermaid) {
+        window.renderMermaid(d.mind_map); 
+      }
+      
+      const mb = document.getElementById('media-box');
+      if(vid) {
+        mb.innerHTML = `<iframe width="100%" height="100%" src="https://www.youtube.com/embed/${vid}" frameborder="0" allowfullscreen></iframe>`;
+      } else {
+        mb.innerHTML = `<div style="text-align:center; opacity:0.5;">Processed Text Content</div>`;
+      }
+
+      const qc = document.getElementById('quiz-container');
+      qc.innerHTML = '';
+      d.quiz.forEach((q,i) => {
+        let html = `<div class="card quiz-card">
+          <h3 style="font-size:var(--text-lg); margin-bottom:var(--space-4);"><span class="text-accent">Q${i+1}.</span> ${q.question}</h3>`;
+        
+        if(q.type === 'mcq' || q.options) {
+          html += `<div class="quiz-options">` + 
+            q.options.map((o,idx) => 
+              `<button onclick="check(this, ${idx===q.answer_index})" class="quiz-option">${o}</button>`
+            ).join('') + `</div>`;
+        } else {
+          const sentence = q.sentence_with_blank.replace('____', `<input class="cloze-input" data-ans="${q.answer}" autocomplete="off" placeholder="?">`);
+          html += `<div style="font-size:var(--text-lg); padding:var(--space-6); background:var(--muted); border-radius:var(--radius-md); line-height:1.8;">${sentence}</div>
+                   <button onclick="checkCloze(this)" class="btn btn--primary" style="margin-top:var(--space-4);">Check Answer</button>`;
+        }
+        html += `<div class="feedback hidden flash-alert" style="margin-top:var(--space-4); margin-bottom:0;"></div></div>`;
+        qc.innerHTML += html;
+      });
+    }
+
+    function renderXRay(lvl) {
+      const c = document.getElementById('xray-content');
+      c.innerHTML = xrayData.map(t => {
+        let h = `<div class="card">
+                 <h2 class="card-title" style="font-size:var(--text-2xl); border-bottom:1px solid var(--border); padding-bottom:var(--space-4); margin-bottom:var(--space-6);">${t.heading}</h2>`;
+        
+        if(lvl >= 2) t.subsections.forEach(s => {
+          h += `<div style="margin-bottom:var(--space-6);">
+                  <h3 style="color:var(--accent); font-size:var(--text-lg); margin-bottom:var(--space-2);">${s.subheading}</h3>`;
+          
+          if(lvl >= 3) h += `<div style="padding:var(--space-3); background:var(--muted); border-left:3px solid var(--accent); border-radius:var(--radius-sm); margin-bottom:var(--space-3); font-size:var(--text-sm);">${s.layer_3_concept}</div>`;
+          
+          if(lvl >= 4) h += `<p style="padding-left:var(--space-4); border-left:1px solid var(--border);">${fmt(s.layer_4_detail)}</p>`;
+          
+          h += `</div>`;
+        });
+        
+        if(lvl < 2) h += `<div style="text-align:center; color:var(--muted-foreground); font-style:italic;">Slide to Level 2 to reveal structure...</div>`;
+        return h + `</div>`;
+      }).join('');
+    }
+    window.renderXRay = renderXRay;
+
+    window.check = (b, corr) => {
+      const fb = b.parentElement.parentElement.querySelector('.feedback');
+      fb.classList.remove('hidden');
+      const allBtns = b.parentElement.children;
+      for(let btn of allBtns) { btn.disabled = true; }
+      
+      if(corr) { 
+        b.classList.add('correct'); 
+        fb.innerHTML = `<strong>Correct!</strong>`;
+        fb.className = "feedback flash-alert flash-alert--success";
+      } else { 
+        b.classList.add('incorrect'); 
+        fb.innerHTML = `<strong>Incorrect.</strong>`;
+        fb.className = "feedback flash-alert flash-alert--error";
+      }
+    };
+
+    window.checkCloze = (b) => {
+      const i = b.previousElementSibling.querySelector('input');
+      const fb = b.nextElementSibling;
+      fb.classList.remove('hidden');
+      const ans = i.dataset.ans;
+      
+      if(i.value.trim().toLowerCase().includes(ans.toLowerCase())) {
+        i.classList.add('correct'); 
+        fb.innerHTML = `<strong>Perfect!</strong>`;
+        fb.className = "feedback flash-alert flash-alert--success";
+      } else {
+        i.classList.add('incorrect'); 
+        fb.innerHTML = `<strong>Answer: ${ans}</strong>`;
+        fb.className = "feedback flash-alert flash-alert--error";
+      }
+    };
+
+    /* Chat Logic */
+    window.toggleChat = () => document.getElementById('chat-window').classList.toggle('open');
+    
+    window.setChatMode = (m) => { 
+      chatMode = m;
+      document.getElementById('chat-tab-tutor').classList.toggle('active', m === 'tutor');
+      document.getElementById('chat-tab-examiner').classList.toggle('active', m === 'examiner');
+      const msgs = document.getElementById('chat-msgs');
+      msgs.innerHTML += `<div style="text-align:center; font-family:var(--font-mono); font-size:var(--text-xs); color:var(--muted-foreground); margin:var(--space-4) 0;">-- Switched to ${m} --</div>`;
+      msgs.scrollTop = msgs.scrollHeight;
+    };
+
+    async function sendChat(e) {
+      e.preventDefault();
+      const i = document.getElementById('chat-in');
+      const msg = i.value.trim();
+      if(!msg) return;
+
+      const box = document.getElementById('chat-msgs');
+      
+      box.innerHTML += `
+        <div class="chat-bubble-user">
+          <div class="chat-bubble-content">${fmt(msg)}</div>
+        </div>`;
+      i.value = ''; box.scrollTop = box.scrollHeight;
+
+      try {
+        const res = await fetch('/study/chat', {
+          method:'POST', 
+          headers:{'Content-Type':'application/json'}, 
+          body:JSON.stringify({session_id:sessId, message:msg, mode:chatMode})
+        });
+        const d = await res.json();
+        
+        box.innerHTML += `
+          <div class="chat-bubble-ai">
+            <div class="chat-bubble-content">
+              <div style="font-family:var(--font-mono); font-size:var(--text-xs); text-transform:uppercase; margin-bottom:var(--space-1); opacity:0.6;">${chatMode}</div>
+              ${fmt(d.reply)}
+            </div>
+          </div>`;
+        box.scrollTop = box.scrollHeight;
+      } catch(e) { console.error(e); }
+    }
+    window.sendChat = sendChat;
+
+    let recognition;
+    let isRecording = false;
+    if ('webkitSpeechRecognition' in window) {
+      recognition = new webkitSpeechRecognition();
+      recognition.continuous = false;
+      recognition.onstart = function() {
+        isRecording = true;
+        document.getElementById('voice-btn').style.color = "var(--destructive)";
+        document.getElementById('chat-in').placeholder = "Listening...";
+      };
+      recognition.onresult = function(event) {
+        document.getElementById('chat-in').value = event.results[0][0].transcript;
+        document.getElementById('chat-submit-btn').click();
+      };
+      recognition.onend = function() {
+        isRecording = false;
+        document.getElementById('voice-btn').style.color = "";
+        document.getElementById('chat-in').placeholder = "Type...";
+      };
+    }
+    window.toggleVoice = () => {
+      if (!recognition) return alert("Voice not supported.");
+      isRecording ? recognition.stop() : recognition.start();
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{# ── _partials/head.html ──
+   Usage: {% include '_partials/head.html' %}
+   Expects: page_title (str), page_description (str, optional)
+#}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="{{ page_description | default('AMC Engineering College — Campus Digital Ecosystem') }}">
+<title>{{ page_title | default('Campus Ecosystem') }} · AMCEC</title>
+
+{# Design system CSS — always in this order #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+
+{# Theme must run before first paint to avoid flash #}
+<script src="{{ url_for('static', filename='js/theme.js') }}" defer></script>
+{# Global cursor glow — runs on every page #}
+<script src="{{ url_for('static', filename='js/cursor.js') }}" defer></script>

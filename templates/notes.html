@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {% include '_partials/head.html' %}
+  {% set page_title = "Notes Hub" %}
+  <style>
+    .page-wrap { min-height: 100vh; display: flex; flex-direction: column; }
+    .main-content { flex: 1; padding: var(--space-10) 0 var(--space-20); }
+
+    .notes-header {
+      padding: var(--space-10) 0 var(--space-8);
+      border-bottom: 1px solid var(--border);
+      margin-bottom: var(--space-8);
+    }
+    .notes-header-inner {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: var(--space-6);
+      flex-wrap: wrap;
+    }
+    .notes-eyebrow {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      margin-bottom: var(--space-3);
+    }
+    .notes-title {
+      font-family: var(--font-display);
+      font-size: var(--text-4xl);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+    }
+
+    /* Grid */
+    .notes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: var(--space-4);
+    }
+
+    /* Note card */
+    .note-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      transition: border-color var(--duration-base), box-shadow var(--duration-base), transform var(--duration-base);
+      text-decoration: none;
+      color: var(--foreground);
+    }
+    .note-card:hover {
+      border-color: var(--accent);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+      opacity: 1;
+    }
+    .note-card-icon {
+      font-size: 2rem;
+      line-height: 1;
+      color: var(--destructive);
+    }
+    .note-card-title {
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      line-height: 1.3;
+    }
+    .note-card-meta {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: var(--muted-foreground);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .note-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: auto;
+      padding-top: var(--space-3);
+      border-top: 1px solid var(--border);
+    }
+
+    /* Upload modal */
+    .drop-zone-wrap {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-md);
+      padding: var(--space-8) var(--space-4);
+      text-align: center;
+      cursor: pointer;
+      transition: all var(--duration-fast);
+      position: relative;
+    }
+    .drop-zone-wrap:hover, .drop-zone-wrap.dragover {
+      border-color: var(--accent);
+      background: var(--accent-light);
+    }
+    .drop-zone-wrap input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    @media (max-width: 768px) {
+      .notes-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body class="page-wrap">
+  {% include '_partials/nav.html' %}
+
+  <main class="main-content">
+    <div class="container">
+
+      <!-- Flash messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, msg in messages %}
+      <div class="flash-alert flash-alert--{{ 'success' if category == 'success' else 'error' }}" style="margin-bottom:var(--space-6);">
+        {{ msg }}
+      </div>
+      {% endfor %}
+      {% endwith %}
+
+      <!-- Header -->
+      <header class="notes-header reveal">
+        <div class="notes-header-inner">
+          <div>
+            <p class="notes-eyebrow">Resource Repository</p>
+            <h1 class="notes-title">Notes Hub.</h1>
+          </div>
+          {% if session.get('role') in ['admin', 'faculty'] %}
+          <button class="btn btn--primary" id="open-upload-btn" onclick="document.getElementById('upload-modal').classList.add('open')" aria-label="Upload a PDF">
+            + Upload PDF
+          </button>
+          {% endif %}
+        </div>
+      </header>
+
+      <!-- Notes grid -->
+      {% if notes %}
+      <div class="notes-grid" id="notes-grid">
+        {% for note in notes %}
+        <div class="note-card reveal">
+          <div class="note-card-icon">⬛</div>
+          <div class="note-card-title">{{ note.title }}</div>
+          <div class="note-card-meta">
+            {{ note.subject }} · Uploaded by {{ note.uploader }}<br>
+            {{ note.uploaded_at }}
+          </div>
+          <div class="note-card-footer">
+            <span class="badge badge--default">PDF</span>
+            <div style="display:flex; gap:var(--space-2);">
+              <a href="/notes/download/{{ note.id }}" class="btn btn--muted btn--sm" download>↓ Download</a>
+              <a href="/notes/view/{{ note.id }}" class="btn btn--ghost btn--sm" target="_blank">↗ Open</a>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state reveal">
+        <div class="empty-state-icon">◻</div>
+        <h2 class="empty-state-title">No PDFs uploaded yet</h2>
+        <p class="empty-state-desc">
+          {% if session.get('role') in ['admin', 'faculty'] %}
+          Upload your first PDF using the button above.
+          {% else %}
+          Your faculty hasn't uploaded any materials yet. Check back later.
+          {% endif %}
+        </p>
+        {% if session.get('role') in ['admin', 'faculty'] %}
+        <button class="btn btn--primary" onclick="document.getElementById('upload-modal').classList.add('open')">Upload First PDF</button>
+        {% endif %}
+      </div>
+      {% endif %}
+
+    </div>
+  </main>
+
+  <!-- Upload Modal -->
+  {% if session.get('role') in ['admin', 'faculty'] %}
+  <div class="modal-overlay" id="upload-modal" role="dialog" aria-modal="true" aria-labelledby="upload-title">
+    <div class="modal">
+      <button class="modal-close" onclick="document.getElementById('upload-modal').classList.remove('open')" aria-label="Close">✕</button>
+      <h2 class="modal-title" id="upload-title">Upload PDF</h2>
+
+      <form method="POST" action="/notes/upload" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:var(--space-5);">
+
+        <div class="form-group">
+          <label class="form-label" for="note-title">Title</label>
+          <input class="input" type="text" id="note-title" name="title" placeholder="e.g. Microcontrollers Unit 3 Notes" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="note-subject">Subject</label>
+          <select class="select" id="note-subject" name="subject" required>
+            <option value="">Select subject</option>
+            <option value="Microcontrollers">Microcontrollers</option>
+            <option value="Signals & Systems">Signals &amp; Systems</option>
+            <option value="Control Systems">Control Systems</option>
+            <option value="Network Theory">Network Theory</option>
+            <option value="Mathematics">Mathematics</option>
+            <option value="Physics">Physics</option>
+            <option value="Computer Science">Computer Science</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">PDF File</label>
+          <div class="drop-zone-wrap" id="drop-zone">
+            <input type="file" name="pdf" id="pdf-input" accept="application/pdf" required>
+            <div class="drop-zone-icon">⇪</div>
+            <p class="drop-zone-text">Click to upload or drag &amp; drop a PDF</p>
+            <p id="file-chosen" style="font-family:var(--font-mono); font-size:var(--text-xs); color:var(--accent); margin-top:var(--space-2); display:none;"></p>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn--primary btn--lg w-full">Upload PDF</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Show file name when chosen
+    document.getElementById('pdf-input').addEventListener('change', function() {
+      const el = document.getElementById('file-chosen');
+      if (this.files.length > 0) {
+        el.textContent = '✓ ' + this.files[0].name;
+        el.style.display = 'block';
+      }
+    });
+    // Close on backdrop click
+    document.getElementById('upload-modal').addEventListener('click', function(e) {
+      if (e.target === this) this.classList.remove('open');
+    });
+    // Close on Escape
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') document.getElementById('upload-modal').classList.remove('open');
+    });
+  </script>
+  {% endif %}
+
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+  <script src="{{ url_for('static', filename='js/toast.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/animations.js') }}"></script>
+</body>
+</html>

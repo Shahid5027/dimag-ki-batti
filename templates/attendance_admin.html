@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {% include '_partials/head.html' %}
+  {% set page_title = "Admin Panel" %}
+</head>
+<body style="display:flex; flex-direction:column; min-height:100vh;">
+  {% include '_partials/nav.html' %}
+
+  <main style="flex:1; padding:var(--space-12) 0;">
+    <div class="container reveal visible">
+      
+      <div class="section-heading">
+        <div>
+          <h2 style="font-family:var(--font-display); font-size:var(--text-4xl);">Admin Hub.</h2>
+          <p class="text-label" style="margin-top:var(--space-2);">System Logs & Analytics</p>
+        </div>
+      </div>
+
+      <div class="grid gap-8">
+
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div style="margin-bottom:var(--space-4);">
+          {% for category, msg in messages %}
+          <div class="flash-alert flash-alert--{{ 'success' if category == 'success' else 'error' }}" style="margin-bottom:var(--space-2);">
+            {{ msg }}
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <!-- Student Management -->
+        <section>
+          <div class="flex items-center justify-between" style="margin-bottom:var(--space-4);">
+            <h3 style="font-size:var(--text-xl);">Student Registration</h3>
+          </div>
+          <div class="card" style="margin-bottom:var(--space-8);">
+            <form action="/attendance/admin/register_student" method="POST" style="display:flex; gap:var(--space-4); align-items:flex-end; flex-wrap:wrap;">
+              <div class="form-group" style="flex:1; min-width:200px;">
+                <label class="form-label" for="usn">USN</label>
+                <input class="input" type="text" id="usn" name="usn" placeholder="e.g. 1AM24EC143" required>
+              </div>
+              <div class="form-group" style="flex:1; min-width:200px;">
+                <label class="form-label" for="password">Password</label>
+                <input class="input" type="password" id="password" name="password" placeholder="Set a password" required>
+              </div>
+              <button type="submit" class="btn btn--primary">Register Student</button>
+            </form>
+          </div>
+
+          <div class="flex items-center justify-between" style="margin-bottom:var(--space-4);">
+            <h3 style="font-size:var(--text-xl);">Device & Session Reset</h3>
+          </div>
+          <div class="card">
+            <form action="/attendance/admin/reset_device" method="POST" style="display:flex; gap:var(--space-4); align-items:flex-end; flex-wrap:wrap;">
+              <div class="form-group" style="flex:1; min-width:200px;">
+                <label class="form-label" for="reset_usn">USN</label>
+                <input class="input" type="text" id="reset_usn" name="usn" placeholder="e.g. 1AM24EC143" required>
+              </div>
+              <button type="submit" class="btn btn--destructive">Remove Device Binding</button>
+            </form>
+            <p class="text-sm text-muted" style="margin-top:var(--space-2);">This deletes the login cookie binding, allowing the student to log in from a new device.</p>
+          </div>
+        </section>
+
+        <!-- Faculty Leaves -->
+        <section>
+          <div class="flex items-center justify-between" style="margin-bottom:var(--space-4);">
+            <h3 style="font-size:var(--text-xl);">Teacher Leaves</h3>
+            <span class="badge badge--destructive">Live</span>
+          </div>
+          
+          <div class="card" style="padding:0; overflow:hidden;">
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Teacher ID</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Timestamp</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in leave_rows %}
+                  <tr>
+                    <td style="font-weight:500;">{{ row['teacher_id'] }}</td>
+                    <td>{{ row['date'] }}</td>
+                    <td><span class="badge badge--destructive">ON Leave</span></td>
+                    <td class="text-muted">{{ row['timestamp'] }}</td>
+                  </tr>
+                  {% else %}
+                  <tr>
+                    <td colspan="4">
+                      <div class="empty-state" style="padding:var(--space-10) var(--space-4);">
+                        <div class="empty-state-icon">✓</div>
+                        <h3 class="empty-state-title" style="font-size:var(--text-base);">No Leaves Recorded</h3>
+                      </div>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Attendance Logs -->
+        <section>
+          <div class="flex items-center justify-between" style="margin-bottom:var(--space-4);">
+            <h3 style="font-size:var(--text-xl);">Attendance Logs</h3>
+            <span class="badge badge--success">Live</span>
+          </div>
+
+          <div class="card" style="padding:0; overflow:hidden;">
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>USN</th>
+                    <th>Session</th>
+                    <th>Status</th>
+                    <th>Timestamp</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in att_rows %}
+                  <tr>
+                    <td style="font-family:var(--font-mono); font-size:var(--text-sm);">{{ row['usn'] }}</td>
+                    <td>{{ row['session'] }}</td>
+                    <td><span class="badge badge--success">{{ row['status'] }}</span></td>
+                    <td class="text-muted">{{ row['timestamp'] }}</td>
+                  </tr>
+                  {% else %}
+                  <tr>
+                    <td colspan="4">
+                      <div class="empty-state" style="padding:var(--space-10) var(--space-4);">
+                        <div class="empty-state-icon">⬡</div>
+                        <h3 class="empty-state-title" style="font-size:var(--text-base);">No Attendance Records</h3>
+                      </div>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </div>
+      
+    </div>
+  </main>
+
+  <script src="{{ url_for('static', filename='js/animations.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {% include '_partials/head.html' %}
+  {% set page_title = "Login to Ecosystem" %}
+  <style>
+    .auth-layout {
+      display: flex;
+      min-height: 100vh;
+    }
+    .auth-editorial {
+      flex: 1;
+      background-color: var(--primary);
+      color: var(--primary-foreground);
+      padding: var(--space-12);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+    .auth-editorial::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(135deg, oklch(0 0 0 / 0) 0%, oklch(0 0 0 / 0.2) 100%);
+      pointer-events: none;
+    }
+    .auth-quote {
+      font-family: var(--font-display);
+      font-size: var(--text-4xl);
+      line-height: 1.1;
+      max-width: 480px;
+      margin-top: auto;
+      margin-bottom: auto;
+      z-index: 1;
+    }
+    .auth-form-side {
+      flex: 1;
+      max-width: 560px;
+      background: var(--background);
+      padding: var(--space-12);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .auth-container {
+      max-width: 380px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    @media (max-width: 900px) {
+      .auth-editorial { display: none; }
+      .auth-form-side { max-width: none; }
+    }
+  </style>
+</head>
+<body>
+  
+  <div class="auth-layout">
+    <div class="auth-editorial">
+      <div class="text-label" style="color:var(--accent-light);">AMC Ecosystem</div>
+      <div class="auth-quote reveal visible">
+        "Education is not the learning of facts, but the training of the mind to think."
+      </div>
+      <div class="text-sm opacity-60 z-1">Albert Einstein</div>
+    </div>
+    
+    <div class="auth-form-side">
+      <div class="auth-container reveal visible">
+        <div style="margin-bottom:var(--space-8);">
+          <h1 style="font-family:var(--font-display); font-size:var(--text-3xl); margin-bottom:var(--space-2);">Welcome back.</h1>
+          <p class="text-muted">Login to mark attendance or access your dashboard.</p>
+        </div>
+        
+        {% if msg %}
+        <div class="flash-alert flash-alert--error">{{ msg }}</div>
+        {% endif %}
+
+        <form method="post" class="form-group" style="gap:var(--space-5);">
+          <div class="form-group">
+            <label class="form-label">USN Prefix</label>
+            <div style="display:flex; align-items:center; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--background); overflow:hidden;">
+              <span style="padding:var(--space-3) var(--space-4); background:var(--muted); color:var(--muted-foreground); font-family:var(--font-mono); font-size:var(--text-sm); border-right:1px solid var(--border);">1AM24EC</span>
+              <input type="text" name="usn" placeholder="e.g. 143" required class="input" style="border:none; border-radius:0;">
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input type="password" name="password" required class="input">
+          </div>
+          
+          <button type="submit" class="btn btn--primary btn--lg w-full" style="margin-top:var(--space-2);">Log in to Campus</button>
+        </form>
+        
+        <div style="margin-top:var(--space-8); text-align:center; font-size:var(--text-sm);">
+          <span class="text-muted">No account?</span> <a href="/attendance/register">Register here</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/animations.js') }}"></script>
+</body>
+</html>

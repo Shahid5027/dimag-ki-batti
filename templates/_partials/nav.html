@@ -1,0 +1,63 @@
+{# ── _partials/nav.html ──
+   Sticky top navigation for all logged-in pages.
+   Expects session: role, id
+#}
+<nav class="nav" id="main-nav" role="navigation" aria-label="Main navigation">
+  <a href="/" class="nav-brand" aria-label="Campus Ecosystem Home">
+    Campus<span>.</span>
+  </a>
+
+  {# Module links — role-aware #}
+  <div class="nav-links" role="list">
+
+    {% if session.get('role') in ['admin', 'faculty'] %}
+    <a href="/attendance/generate" class="nav-link {% if request.path == '/attendance/generate' %}active{% endif %}" role="listitem">
+      QR Attendance
+    </a>
+    <a href="/attendance/faculty" class="nav-link {% if '/faculty' in request.path %}active{% endif %}" role="listitem">
+      Reports
+    </a>
+    {% endif %}
+
+    {% if session.get('role') == 'student' %}
+    <a href="/attendance/" class="nav-link {% if request.path.startswith('/attendance') %}active{% endif %}" role="listitem">
+      My Attendance
+    </a>
+    {% endif %}
+
+    {% if session.get('role') in ['admin', 'student'] %}
+    <a href="/study/" class="nav-link {% if request.path.startswith('/study') %}active{% endif %}" role="listitem">
+      Study AI
+    </a>
+    {% endif %}
+
+    <a href="/notes" class="nav-link {% if request.path == '/notes' %}active{% endif %}" role="listitem">
+      Notes
+    </a>
+
+    {% if session.get('role') == 'admin' %}
+    <a href="/attendance/admin" class="nav-link {% if '/admin' in request.path %}active{% endif %}" role="listitem">
+      Admin
+    </a>
+    {% endif %}
+
+  </div>
+
+  <div class="nav-right">
+    {# Role badge #}
+    {% set role = session.get('role', 'guest') %}
+    <span class="role-badge role-badge--{{ role }}" aria-label="Your role: {{ role }}">
+      {{ role }}
+    </span>
+
+    {# Theme toggle #}
+    <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode" title="Toggle theme">
+      ◑
+    </button>
+
+    {# Profile / logout #}
+    <a href="/logout" class="btn btn--ghost btn--sm" aria-label="Sign out">
+      Sign out
+    </a>
+  </div>
+</nav>

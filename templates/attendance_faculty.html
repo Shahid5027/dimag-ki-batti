@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {% include '_partials/head.html' %}
+  {% set page_title = "Faculty — Attendance Report" %}
+</head>
+<body style="display:flex; flex-direction:column; min-height:100vh;">
+  {% include '_partials/nav.html' %}
+
+  <main style="flex:1; padding:var(--space-12) 0;">
+    <div class="container reveal visible">
+
+      <div class="section-heading">
+        <div>
+          <h2 style="font-family:var(--font-display); font-size:var(--text-4xl);">Attendance Report.</h2>
+          <p class="text-label" style="margin-top:var(--space-2);">Logged in as {{ teacher_id }}</p>
+        </div>
+        <div style="display:flex; gap:var(--space-3);">
+          <a href="/attendance/faculty/download" class="btn btn--muted">Download .csv</a>
+          <a href="/attendance/generate" class="btn btn--primary">Generate QR</a>
+        </div>
+      </div>
+
+      <!-- Summary Stats Row -->
+      <div style="display:grid; grid-template-columns: repeat(3,1fr); gap:var(--space-4); margin-bottom:var(--space-8);">
+        <div class="stat-card stat-accent">
+          <span class="stat-label">Total Sessions</span>
+          <span class="stat-value">{{ total_sessions }}</span>
+          <span class="stat-sub">Unique sessions recorded</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Total Present</span>
+          <span class="stat-value">{{ total_present }}</span>
+          <span class="stat-sub">Across all students</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Unique Students</span>
+          <span class="stat-value">{{ unique_students }}</span>
+          <span class="stat-sub">Registered &amp; active</span>
+        </div>
+      </div>
+
+      <!-- Pivot Table / Register View -->
+      <h3 style="font-size:var(--text-xl); margin-bottom:var(--space-4);">Attendance Register</h3>
+      <div class="card" style="padding:0; overflow-x:auto; margin-bottom:var(--space-8);">
+        <div class="table-wrap">
+          <table class="table" style="min-width: max-content;">
+            <thead>
+              <tr>
+                <th style="position: sticky; left: 0; background: var(--card); z-index: 1;">USN</th>
+                {% for s in sessions %}
+                <th style="font-size:var(--text-xs); white-space:nowrap;">{{ s }}</th>
+                {% endfor %}
+                <th style="font-size:var(--text-xs);">%</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for usn in sorted_usns %}
+              {% set total_p = namespace(count=0) %}
+              <tr>
+                <td style="font-family:var(--font-mono); font-size:var(--text-sm); font-weight:600; position: sticky; left: 0; background: var(--card); z-index: 1;">{{ usn }}</td>
+                {% for s in sessions %}
+                {% set status = att_matrix[usn][s] %}
+                {% if status == 'P' %} {% set total_p.count = total_p.count + 1 %} {% endif %}
+                <td style="text-align:center; font-weight:600;">
+                  {% if status == 'P' %}
+                  <span style="color:var(--success);">P</span>
+                  {% else %}
+                  <span style="color:var(--destructive);">A</span>
+                  {% endif %}
+                </td>
+                {% endfor %}
+                
+                {% set pct = ((total_p.count / total_sessions * 100) | round(0)) if total_sessions > 0 else 0 %}
+                <td style="text-align:center;">
+                  <span class="badge {% if pct >= 75 %}badge--success{% elif pct >= 50 %}badge--warning{% else %}badge--destructive{% endif %}">
+                    {{ pct }}%
+                  </span>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="{{ sessions|length + 2 }}">
+                  <div class="empty-state" style="padding:var(--space-8);">
+                    <div class="empty-state-icon">⬡</div>
+                    <h3 class="empty-state-title">No Attendance Data</h3>
+                    <p class="empty-state-desc">Students need to scan the QR to appear here.</p>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="{{ url_for('static', filename='js/animations.js') }}"></script>
+</body>
+</html>

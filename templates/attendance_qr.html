@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {% include '_partials/head.html' %}
+  {% set page_title = "Live Attendance" %}
+  <meta http-equiv="refresh" content="{{ expiry }}">
+</head>
+<body class="page-wrap" style="display:flex; flex-direction:column; min-height:100vh;">
+  {% include '_partials/nav.html' %}
+
+  <main style="flex:1; display:flex; align-items:center; justify-content:center; padding:var(--space-12) var(--space-4);">
+    <div class="qr-card reveal visible">
+      <h2 class="card-title" style="font-family:var(--font-display); font-size:var(--text-3xl);">Live Check-in</h2>
+      <p class="card-desc" style="margin-bottom:var(--space-6);">Students, scan to mark your attendance.</p>
+      
+      <div style="background:white; padding:var(--space-4); border-radius:var(--radius-lg); display:inline-block; border:1px solid var(--border);">
+        <img id="qr-img" src="data:image/png;base64,{{ qr }}" alt="Attendance QR Code" class="qr-img" style="border:none;">
+      </div>
+      
+      <div id="countdown" class="qr-timer">{{ expiry }}</div>
+      <p class="text-label" style="margin-bottom:var(--space-8);">Seconds Remaining</p>
+      
+      <div id="nextqr" class="text-sm text-muted"></div>
+      
+      <div style="margin-top:var(--space-8); padding-top:var(--space-6); border-top:1px solid var(--border);">
+        <button onclick="location.reload()" class="btn btn--muted" style="width:100%;">
+          Regenerate QR Now
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <script src="{{ url_for('static', filename='js/animations.js') }}"></script>
+  <script>
+    let timer = {{ expiry }};
+    const countdown = document.getElementById('countdown');
+    const nextQR = document.getElementById('nextqr');
+    const qrImg = document.getElementById('qr-img');
+
+    const interval = setInterval(() => {
+        timer--;
+        if (timer > 0) {
+            countdown.textContent = timer;
+        } else {
+            countdown.textContent = "0";
+            countdown.classList.add('qr-expired');
+            qrImg.style.opacity = "0.2";
+            clearInterval(interval);
+
+            let regen = 5;
+            nextQR.innerHTML = `<span class="spinner" style="width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:8px;"></span> Next QR in ${regen}s...`;
+
+            const regenInterval = setInterval(() => {
+                regen--;
+                nextQR.innerHTML = `<span class="spinner" style="width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:8px;"></span> Next QR in ${regen}s...`;
+                if (regen === 0) {
+                    clearInterval(regenInterval);
+                    location.reload(); 
+                }
+            }, 1000);
+        }
+    }, 1000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {% include '_partials/head.html' %}
+  {% set page_title = "My Attendance" %}
+</head>
+<body style="display:flex; flex-direction:column; min-height:100vh;">
+  {% include '_partials/nav.html' %}
+
+  <main style="flex:1; padding:var(--space-12) 0;">
+    <div class="container-sm reveal visible">
+
+      {% set total = rows | length %}
+      {% set present = rows | selectattr('status', 'equalto', 'P') | list | length %}
+      {% set pct = ((present / total * 100) | round(0)) if total > 0 else 0 %}
+      {% set offset = (283 * (1 - pct / 100)) | round(1) %}
+
+      <div class="section-heading" style="justify-content:space-between; align-items:center;">
+        <div>
+          <h2 style="font-family:var(--font-display); font-size:var(--text-4xl);">My Attendance.</h2>
+          <p class="text-label" style="margin-top:var(--space-2);">USN: {{ usn }}</p>
+        </div>
+
+        <div class="ring-chart" style="width:120px; height:120px;">
+          <svg width="120" height="120" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="45" fill="none" stroke="var(--muted)" stroke-width="8"></circle>
+            <circle cx="50" cy="50" r="45" fill="none"
+              stroke="{% if pct >= 75 %}var(--success){% elif pct >= 50 %}var(--warning){% else %}var(--destructive){% endif %}"
+              stroke-width="8"
+              stroke-dasharray="283"
+              stroke-dashoffset="{{ offset }}"
+              stroke-linecap="round"></circle>
+          </svg>
+          <span class="ring-chart-label" style="font-size:var(--text-lg);">{{ pct }}%</span>
+        </div>
+      </div>
+
+      {% if pct < 75 and total > 0 %}
+      <div class="flash-alert flash-alert--error" style="margin-bottom:var(--space-6);">
+        ⚠ Your attendance is {{ pct }}% — below the required 75%. Please attend classes regularly.
+      </div>
+      {% endif %}
+
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div style="padding:var(--space-4) var(--space-6); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+          <span class="text-label">Attendance Record</span>
+          <span style="font-family:var(--font-mono); font-size:var(--text-xs); color:var(--muted-foreground);">
+            {{ present }} / {{ total }} sessions present
+          </span>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Session</th>
+                <th>Status</th>
+                <th>Date &amp; Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in rows %}
+              <tr>
+                <td style="font-weight:500;">{{ row['session'] }}</td>
+                <td><span class="badge badge--success">Present</span></td>
+                <td class="text-muted" style="font-family:var(--font-mono); font-size:var(--text-xs);">{{ row['timestamp'] }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="3">
+                  <div class="empty-state">
+                    <div class="empty-state-icon">⬡</div>
+                    <h3 class="empty-state-title">No Records Found</h3>
+                    <p class="empty-state-desc">Scan a class QR code to mark your first attendance.</p>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="{{ url_for('static', filename='js/animations.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+  {% include '_partials/head.html' %}
+  {% set page_title = "Sign In — Campus Ecosystem" %}
+  {% set page_description = "Sign in to AMC Engineering College Campus Digital Ecosystem" %}
+  <style>
+    /* ── Force dark vars ── */
+    :root {
+      --bg-deep: oklch(0.06 0.02 265);
+      --bg-card: oklch(0.10 0.025 265 / 0.85);
+      --border-glass: oklch(0.95 0.005 80 / 0.08);
+      --glow-a: oklch(42.104% 0.21993 280.461 / 0.752);
+      --glow-b: oklch(0.38 0.18 200);
+      --glow-c: oklch(49.892% 0.19995 319.47 / 0.696);
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      background: var(--bg-deep);
+      color: oklch(0.92 0.01 265);
+      font-family: var(--font-sans);
+    }
+
+    /* ── Animated background ── */
+    .login-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      background: var(--bg-deep);
+    }
+
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(140px);
+      animation: orbFloat 12s ease-in-out infinite;
+    }
+
+    .orb-1 {
+      width: 50vw;
+      height: 50vw;
+      top: -15%;
+      left: -5%;
+      background: oklch(42.104% 0.21993 280.461 / 0.752);
+      opacity: 0.010;
+      animation-delay: 0s;
+      animation-duration: 15s;
+    }
+
+    .orb-2 {
+      width: 38vw;
+      height: 38vw;
+      bottom: -8%;
+      right: -5%;
+      background: oklch(0.38 0.18 200);
+      opacity: 0.008;
+      animation-delay: -5s;
+      animation-duration: 18s;
+    }
+
+    .orb-3 {
+      width: 28vw;
+      height: 28vw;
+      top: 40%;
+      left: 35%;
+      background: oklch(49.892% 0.19995 319.47 / 0.696);
+      opacity: 0.007;
+      animation-delay: -9s;
+      animation-duration: 20s;
+    }
+
+    @keyframes orbFloat {
+      0% {
+        transform: translate(0, 0) scale(1);
+        opacity: inherit;
+      }
+
+      33% {
+        transform: translate(4%, 6%) scale(1.08);
+      }
+
+      66% {
+        transform: translate(-3%, -4%) scale(0.96);
+      }
+
+      100% {
+        transform: translate(0, 0) scale(1);
+      }
+    }
+
+    /* Subtle grid overlay */
+    .login-grid {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background-image:
+        linear-gradient(oklch(0.95 0.005 80 / 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, oklch(0.95 0.005 80 / 0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+
+    /* ── Main layout ── */
+    .login-wrap {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    @media (max-width: 768px) {
+      .login-wrap {
+        grid-template-columns: 1fr;
+        min-height: 100vh;
+      }
+
+      .login-left {
+        display: none;
+      }
+
+      .login-right {
+        padding: var(--space-8) var(--space-5);
+        min-height: 100vh;
+        box-sizing: border-box;
+      }
+
+      .login-card {
+        max-width: 100% !important;
+        padding: var(--space-8) var(--space-6) !important;
+      }
+    }
+
+    /* ── Left panel ── */
+    .login-left {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: var(--space-12) var(--space-12);
+    }
+
+    .login-logo {
+      font-family: var(--font-display);
+      font-size: var(--text-xl);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: oklch(0.95 0.01 80);
+    }
+
+    .login-logo em {
+      font-style: normal;
+      color: oklch(0.60 0.22 280);
+    }
+
+    .login-tagline {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .login-tagline-eyebrow {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: oklch(0.60 0.22 280);
+      margin-bottom: var(--space-5);
+    }
+
+    .login-tagline h1 {
+      font-family: var(--font-display);
+      font-size: clamp(3.5rem, 5vw, 6rem);
+      font-weight: 700;
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+      color: oklch(0.96 0.005 80);
+      margin: 0 0 var(--space-6);
+    }
+
+    .login-tagline h1 em {
+      font-style: italic;
+      color: oklch(0.60 0.22 280);
+      font-weight: 300;
+    }
+
+    .login-tagline p {
+      font-size: var(--text-base);
+      color: oklch(0.55 0.01 265);
+      line-height: 1.6;
+      max-width: 340px;
+    }
+
+    .login-footer-hints {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: oklch(0.38 0.01 265);
+      line-height: 2.2;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border-top: 1px solid oklch(0.95 0.005 80 / 0.08);
+      padding-top: var(--space-5);
+    }
+
+    .login-footer-hints strong {
+      color: oklch(0.50 0.01 265);
+    }
+
+    /* ── Right panel ── */
+    .login-right {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-12) var(--space-10);
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-glass);
+      border-radius: 24px;
+      padding: var(--space-10) var(--space-10);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      box-shadow:
+        0 0 0 1px oklch(0.95 0.005 80 / 0.06),
+        0 32px 80px oklch(0.06 0.02 265 / 0.6),
+        0 0 80px oklch(0.42 0.22 280 / 0.06) inset;
+      animation: cardIn 0.6s var(--ease-out) both;
+    }
+
+    @keyframes cardIn {
+      from {
+        opacity: 0;
+        transform: translateY(24px) scale(0.97);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .card-eyebrow {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: oklch(0.60 0.22 280);
+      margin-bottom: var(--space-3);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .card-eyebrow::before {
+      content: '';
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: oklch(0.60 0.22 280);
+      box-shadow: 0 0 8px oklch(0.60 0.22 280 / 0.8);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 0.4;
+        transform: scale(0.7);
+      }
+    }
+
+    .card-title {
+      font-family: var(--font-display);
+      font-size: var(--text-3xl);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: oklch(0.96 0.005 80);
+      margin-bottom: var(--space-2);
+      line-height: 1.1;
+    }
+
+    .card-sub {
+      font-size: var(--text-sm);
+      color: oklch(0.48 0.01 265);
+      margin-bottom: var(--space-8);
+      line-height: 1.5;
+    }
+
+    /* Form inputs — dark glass style */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      margin-bottom: var(--space-5);
+    }
+
+    .form-label-dark {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.10em;
+      color: oklch(0.50 0.01 265);
+    }
+
+    .input-dark {
+      width: 100%;
+      padding: 0.85rem 1rem;
+      background: oklch(0.13 0.02 265 / 0.8);
+      border: 1px solid oklch(0.95 0.005 80 / 0.10);
+      border-radius: 10px;
+      color: oklch(0.94 0.005 80);
+      font-family: var(--font-sans);
+      font-size: var(--text-base);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+      box-sizing: border-box;
+    }
+
+    .input-dark::placeholder {
+      color: oklch(0.35 0.01 265);
+    }
+
+    .input-dark:focus {
+      border-color: oklch(0.55 0.22 280 / 0.6);
+      background: oklch(0.15 0.025 265 / 0.9);
+      box-shadow: 0 0 0 3px oklch(0.55 0.22 280 / 0.12);
+    }
+
+    .input-hint {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: oklch(0.38 0.01 265);
+      line-height: 1.5;
+    }
+
+    .pw-wrap {
+      position: relative;
+    }
+
+    .pw-wrap .input-dark {
+      padding-right: 4rem;
+    }
+
+    .pw-toggle {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: oklch(0.45 0.01 265);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+
+    .pw-toggle:hover {
+      color: oklch(0.65 0.22 280);
+    }
+
+    /* Error */
+    .error-alert {
+      background: oklch(0.50 0.20 25 / 0.12);
+      border: 1px solid oklch(0.50 0.20 25 / 0.25);
+      border-radius: 10px;
+      padding: var(--space-4) var(--space-5);
+      margin-bottom: var(--space-6);
+      color: oklch(0.75 0.15 25);
+      font-size: var(--text-sm);
+      font-family: var(--font-sans);
+    }
+
+    /* Submit button */
+    .btn-signin {
+      width: 100%;
+      padding: 0.95rem 1.5rem;
+      background: linear-gradient(135deg, oklch(0.42 0.22 280), oklch(0.38 0.20 260));
+      border: none;
+      border-radius: 12px;
+      color: oklch(0.97 0.005 80);
+      font-family: var(--font-sans);
+      font-size: var(--text-base);
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.01em;
+      margin-top: var(--space-3);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+      box-shadow: 0 4px 24px oklch(0.42 0.22 280 / 0.35);
+    }
+
+    .btn-signin::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, oklch(0.95 0.005 80 / 0.10), transparent);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .btn-signin:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 32px oklch(0.42 0.22 280 / 0.50);
+      filter: brightness(1.08);
+    }
+
+    .btn-signin:hover::before {
+      opacity: 1;
+    }
+
+    .btn-signin:active {
+      transform: translateY(0);
+    }
+
+    .btn-signin .btn-icon {
+      margin-left: var(--space-2);
+      display: inline-block;
+      transition: transform 0.2s;
+    }
+
+    .btn-signin:hover .btn-icon {
+      transform: translateX(4px);
+    }
+
+    /* Footer */
+    .card-footer {
+      margin-top: var(--space-8);
+      padding-top: var(--space-6);
+      border-top: 1px solid oklch(0.95 0.005 80 / 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-footer-text {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: oklch(0.32 0.01 265);
+      line-height: 1.8;
+    }
+
+    .card-footer-text strong {
+      color: oklch(0.42 0.01 265);
+    }
+
+    .theme-pill {
+      background: oklch(0.13 0.02 265 / 0.8);
+      border: 1px solid oklch(0.95 0.005 80 / 0.10);
+      border-radius: 999px;
+      padding: var(--space-2) var(--space-4);
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: oklch(0.45 0.01 265);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .theme-pill:hover {
+      border-color: oklch(0.55 0.22 280 / 0.4);
+      color: oklch(0.60 0.22 280);
+    }
+
+    /* Mobile brand */
+    .mobile-bar {
+      display: none;
+      position: relative;
+      z-index: 1;
+      padding: var(--space-5) var(--space-6);
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid oklch(0.95 0.005 80 / 0.06);
+    }
+
+    .mobile-bar-logo {
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
+      font-weight: 700;
+      color: oklch(0.95 0.01 80);
+    }
+
+    .mobile-bar-logo em {
+      font-style: normal;
+      color: oklch(0.60 0.22 280);
+    }
+
+    @media (max-width: 768px) {
+      .mobile-bar {
+        display: flex;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Animated BG -->
+  <div class="login-bg">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+  <div class="login-grid"></div>
+
+  <!-- Mobile bar -->
+  <div class="mobile-bar">
+    <span class="mobile-bar-logo">Campus<em>.</em></span>
+    <button class="theme-pill" onclick="toggleTheme()">◑ Theme</button>
+  </div>
+
+  <div class="login-wrap">
+
+    <!-- Left editorial -->
+    <aside class="login-left" aria-hidden="true">
+      <div class="login-logo">Campus<em>.</em></div>
+
+      <div class="login-tagline">
+        <p class="login-tagline-eyebrow">AMC Engineering College · Bangalore</p>
+        <h1>Learn.<br><em>Build.</em><br>Lead.</h1>
+        <p>Your unified gateway to attendance, AI-powered study tools, faculty resources, and campus life — all in one
+          place.</p>
+      </div>
+
+      <div class="login-footer-hints">
+        <strong>Student</strong> — Full USN e.g. 1AM24EC143<br>
+        <strong>Faculty</strong> — Institutional email or username<br>
+        <strong>Admin</strong> — Admin credentials
+      </div>
+    </aside>
+
+    <!-- Right: form card -->
+    <div class="login-right">
+      <div class="login-card">
+
+        <div class="card-eyebrow">Secure Access</div>
+        <h2 class="card-title">Sign in</h2>
+        <p class="card-sub">Enter your credentials to access the campus ecosystem.</p>
+
+        {% if error %}
+        <div class="error-alert" role="alert">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST" action="" novalidate>
+          <input type="hidden" name="next" value="{{ next or '' }}">
+
+          <div class="form-group">
+            <label class="form-label-dark" for="username">Identity</label>
+            <input class="input-dark" type="text" id="username" name="username" required autocomplete="username"
+              placeholder="USN, email, or admin ID" aria-describedby="username-hint">
+            <span class="input-hint" id="username-hint">
+              Students: full USN (e.g. 1AM24EC143) · Faculty: email or username
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label-dark" for="password">Password</label>
+            <div class="pw-wrap">
+              <input class="input-dark" type="password" id="password" name="password" required
+                autocomplete="current-password" placeholder="Your password">
+              <button type="button" class="pw-toggle" onclick="togglePw()" id="toggle-pw">Show</button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-signin">
+            Sign in <span class="btn-icon">→</span>
+          </button>
+        </form>
+
+        <div class="card-footer">
+          <div class="card-footer-text">
+            AMC Engineering College<br>
+            <strong>Campus Digital Ecosystem v2.0</strong>
+          </div>
+          <button class="theme-pill" onclick="toggleTheme()" aria-label="Toggle theme">◑ Theme</button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <script>
+    function togglePw() {
+      const pw = document.getElementById('password');
+      const btn = document.getElementById('toggle-pw');
+      if (pw.type === 'password') { pw.type = 'text'; btn.textContent = 'Hide'; }
+      else { pw.type = 'password'; btn.textContent = 'Show'; }
+    }
+  </script>
+</body>
+
+</html>
