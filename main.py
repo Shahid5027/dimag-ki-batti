@@ -8,6 +8,7 @@ from routes.study_api import study_bp
 from routes.attendance_api import attendance_bp
 from routes.auth_api import auth_bp
 from routes.queries_api import queries_bp
+from routes.timetable_api import timetable_bp
 
 app = Flask(__name__)
 # Configurations
@@ -36,6 +37,7 @@ def get_notes_db():
 
 def init_notes_db():
     conn = get_notes_db()
+    # Core table (legacy-safe)
     conn.execute('''
         CREATE TABLE IF NOT EXISTS Notes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,9 +45,17 @@ def init_notes_db():
             subject TEXT NOT NULL,
             filename TEXT NOT NULL,
             uploader TEXT NOT NULL,
-            uploaded_at TEXT NOT NULL
+            uploaded_at TEXT NOT NULL,
+            dept TEXT NOT NULL DEFAULT \'General\',
+            sub_dept TEXT NOT NULL DEFAULT \'General\'
         )
     ''')
+    # Migrate: add dept / sub_dept if missing (existing DBs)
+    existing_cols = {row[1] for row in conn.execute("PRAGMA table_info(Notes)").fetchall()}
+    if 'dept' not in existing_cols:
+        conn.execute("ALTER TABLE Notes ADD COLUMN dept TEXT NOT NULL DEFAULT 'General'")
+    if 'sub_dept' not in existing_cols:
+        conn.execute("ALTER TABLE Notes ADD COLUMN sub_dept TEXT NOT NULL DEFAULT 'General'")
     conn.commit()
     conn.close()
 
@@ -56,6 +66,7 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(study_bp, url_prefix='/study')
 app.register_blueprint(attendance_bp, url_prefix='/attendance')
 app.register_blueprint(queries_bp, url_prefix='/queries')
+app.register_blueprint(timetable_bp, url_prefix='/timetable')
 
 @app.before_request
 def require_login():
@@ -73,18 +84,26 @@ def index():
 @app.route('/notes')
 def notes():
     conn = get_notes_db()
-    rows = conn.execute('SELECT * FROM Notes ORDER BY uploaded_at DESC').fetchall()
+    rows = conn.execute('SELECT * FROM Notes ORDER BY dept, sub_dept, uploaded_at DESC').fetchall()
     conn.close()
-    return render_template('notes.html', notes=rows)
+    # Build hierarchy: {dept: {sub_dept: [notes]}}
+    hierarchy = {}
+    for row in rows:
+        d = row['dept'] or 'General'
+        s = row['sub_dept'] or 'General'
+        hierarchy.setdefault(d, {}).setdefault(s, []).append(row)
+    return render_template('notes.html', notes=rows, hierarchy=hierarchy)
 
 @app.route('/notes/upload', methods=['POST'])
 def notes_upload():
     if session.get('role') not in ['admin', 'faculty']:
         abort(403)
 
-    title   = request.form.get('title', '').strip()
-    subject = request.form.get('subject', '').strip()
-    pdf     = request.files.get('pdf')
+    title    = request.form.get('title', '').strip()
+    subject  = request.form.get('subject', '').strip()
+    dept     = request.form.get('dept', 'General').strip()
+    sub_dept = request.form.get('sub_dept', 'General').strip()
+    pdf      = request.files.get('pdf')
 
     if not title or not subject or not pdf or pdf.filename == '':
         flash('Please fill all fields and select a PDF file.', 'error')
@@ -101,13 +120,32 @@ def notes_upload():
 
     conn = get_notes_db()
     conn.execute(
-        'INSERT INTO Notes (title, subject, filename, uploader, uploaded_at) VALUES (?, ?, ?, ?, ?)',
-        (title, subject, safe_name, session.get('id', 'Faculty'), datetime.now().strftime('%d %b %Y, %H:%M'))
+        'INSERT INTO Notes (title, subject, filename, uploader, uploaded_at, dept, sub_dept) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        (title, subject, safe_name, session.get('id', 'Faculty'),
+         datetime.now().strftime('%d %b %Y, %H:%M'), dept, sub_dept)
     )
     conn.commit()
     conn.close()
 
-    flash(f'"{title}" uploaded successfully.', 'success')
+    flash(f'"{title}" uploaded successfully under {dept} → {sub_dept}.', 'success')
+    return redirect(url_for('notes'))
+
+
+@app.route('/notes/delete/<int:note_id>', methods=['POST'])
+def notes_delete(note_id):
+    if session.get('role') not in ['admin', 'faculty']:
+        abort(403)
+    conn = get_notes_db()
+    note = conn.execute('SELECT * FROM Notes WHERE id = ?', (note_id,)).fetchone()
+    if note:
+        try:
+            os.remove(os.path.join(UPLOAD_FOLDER, note['filename']))
+        except FileNotFoundError:
+            pass
+        conn.execute('DELETE FROM Notes WHERE id = ?', (note_id,))
+        conn.commit()
+        flash('Note deleted.', 'success')
+    conn.close()
     return redirect(url_for('notes'))
 
 @app.route('/notes/download/<int:note_id>')

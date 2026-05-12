@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {% include '_partials/head.html' %}
+  {% set page_title = "Timetable" %}
+  <style>
+    .page-wrap { min-height: 100vh; display: flex; flex-direction: column; }
+    .main-content { flex: 1; padding: var(--space-10) 0 var(--space-20); }
+
+    /* ── Header ── */
+    .tt-header {
+      padding: var(--space-10) 0 var(--space-8);
+      border-bottom: 1px solid var(--border);
+      margin-bottom: var(--space-8);
+    }
+    .tt-header-inner { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-6); flex-wrap: wrap; }
+    .tt-eyebrow { font-family: var(--font-mono); font-size: var(--text-xs); text-transform: uppercase; letter-spacing: .12em; color: var(--accent); margin-bottom: var(--space-3); }
+    .tt-title  { font-family: var(--font-display); font-size: var(--text-4xl); font-weight: 700; letter-spacing: -.03em; line-height: 1.05; }
+    .tt-label  { display: inline-flex; align-items: center; gap: var(--space-2); background: var(--accent-light); color: var(--accent); font-family: var(--font-mono); font-size: var(--text-xs); padding: var(--space-1) var(--space-3); border-radius: 999px; text-transform: uppercase; margin-top: var(--space-3); }
+
+    /* ── Grid of cards ── */
+    .tt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-5); }
+
+    .tt-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+      display: flex; flex-direction: column; gap: var(--space-3);
+      transition: border-color var(--duration-base), box-shadow var(--duration-base), transform var(--duration-base);
+    }
+    .tt-card:hover { border-color: var(--accent); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+    .tt-card-icon { font-size: 2rem; }
+    .tt-card-title { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 600; line-height: 1.3; }
+    .tt-card-meta  { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--muted-foreground); text-transform: uppercase; letter-spacing: .06em; }
+    .tt-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: var(--space-3); border-top: 1px solid var(--border); }
+
+    /* ── Tabs (admin only) ── */
+    .tab-bar { display: flex; gap: var(--space-2); margin-bottom: var(--space-6); flex-wrap: wrap; }
+    .tab-btn { padding: var(--space-2) var(--space-5); border-radius: var(--radius-md); border: 1px solid var(--border); background: transparent; color: var(--muted-foreground); font-family: var(--font-mono); font-size: var(--text-xs); text-transform: uppercase; letter-spacing: .08em; cursor: pointer; transition: all var(--duration-fast); }
+    .tab-btn.active, .tab-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* ── Filter row ── */
+    .filter-row { display: flex; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-6); align-items: center; }
+    .filter-row .select { min-width: 140px; }
+
+    /* ── Section rules table ── */
+    .rules-table { width: 100%; border-collapse: collapse; margin-top: var(--space-4); font-size: var(--text-sm); }
+    .rules-table th, .rules-table td { padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); text-align: left; }
+    .rules-table thead th { font-family: var(--font-mono); font-size: var(--text-xs); text-transform: uppercase; color: var(--muted-foreground); letter-spacing: .08em; background: var(--card); }
+
+    /* ── Modal tweaks ── */
+    .upload-modal .modal { max-width: 540px; }
+
+    @media (max-width: 768px) {
+      .tt-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body class="page-wrap">
+  {% include '_partials/nav.html' %}
+
+  <main class="main-content">
+    <div class="container">
+
+      {# Flash messages #}
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, msg in messages %}
+      <div class="flash-alert flash-alert--{{ 'success' if category == 'success' else 'error' }}" style="margin-bottom:var(--space-6);">{{ msg }}</div>
+      {% endfor %}
+      {% endwith %}
+
+      {# ── Header ── #}
+      <header class="tt-header reveal">
+        <div class="tt-header-inner">
+          <div>
+            <p class="tt-eyebrow">Academic Schedule</p>
+            <h1 class="tt-title">Timetable.</h1>
+            <div class="tt-label">📅 {{ view_label }}</div>
+          </div>
+          {% if session.get('role') == 'admin' %}
+          <button class="btn btn--primary" id="open-upload-btn"
+            onclick="document.getElementById('tt-upload-modal').classList.add('open')"
+            aria-label="Upload a timetable">
+            + Upload Timetable
+          </button>
+          {% endif %}
+        </div>
+      </header>
+
+      {# ── Admin tabs ── #}
+      {% if session.get('role') == 'admin' %}
+      <div class="tab-bar" id="admin-tab-bar">
+        <button class="tab-btn active" onclick="switchTab('all', this)">All Timetables</button>
+        <button class="tab-btn" onclick="switchTab('section-rules', this)">Section Rules</button>
+      </div>
+      {% endif %}
+
+      {# ── Admin: Filter row ── #}
+      {% if session.get('role') == 'admin' %}
+      <div id="tab-all">
+        <div class="filter-row">
+          <select class="select" id="dept-filter" onchange="filterCards()">
+            <option value="">All Departments</option>
+            <option>ECE</option><option>CSE</option><option>ISE</option>
+            <option>ME</option><option>CIVIL</option><option>TEACHER</option>
+          </select>
+          <select class="select" id="section-filter" onchange="filterCards()">
+            <option value="">All Sections</option>
+            <option>A</option><option>B</option><option>C</option>
+          </select>
+        </div>
+      {% endif %}
+
+        {# ── Cards grid ── #}
+        {% if rows %}
+        <div class="tt-grid" id="tt-grid">
+          {% for row in rows %}
+          <div class="tt-card reveal" data-dept="{{ row.dept }}" data-section="{{ row.section or '' }}">
+            <div class="tt-card-icon">
+              {% if row.filename.lower().endswith('.pdf') %}📄{% else %}🖼️{% endif %}
+            </div>
+            <div class="tt-card-title">{{ row.label }}</div>
+            <div class="tt-card-meta">
+              {{ row.dept }}{% if row.section %} · Sec {{ row.section }}{% endif %}
+              {% if row.target_type == 'teacher' %} · 👨‍🏫 Teacher{% endif %}
+              <br>Uploaded {{ row.uploaded_at }} by {{ row.uploader }}
+            </div>
+            <div class="tt-card-footer">
+              <span class="badge badge--default">{{ row.target_type|upper }}</span>
+              <div style="display:flex; gap:var(--space-2);">
+                <a href="/timetable/download/{{ row.id }}" class="btn btn--muted btn--sm" download>↓ Download</a>
+                <a href="/timetable/view/{{ row.id }}" class="btn btn--ghost btn--sm" target="_blank">↗ Open</a>
+                {% if session.get('role') == 'admin' %}
+                <form method="POST" action="/timetable/delete/{{ row.id }}"
+                      onsubmit="return confirm('Delete this timetable?')" style="display:inline;">
+                  <button type="submit" class="btn btn--sm" style="background:var(--destructive);color:#fff;border:none;">✕</button>
+                </form>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state reveal">
+          <div class="empty-state-icon">📅</div>
+          <h2 class="empty-state-title">No timetables yet</h2>
+          <p class="empty-state-desc">
+            {% if session.get('role') == 'admin' %}
+              Upload the first timetable using the button above.
+            {% else %}
+              Your admin hasn't uploaded your timetable yet. Check back soon.
+            {% endif %}
+          </p>
+        </div>
+        {% endif %}
+
+      {% if session.get('role') == 'admin' %}
+      </div>{# /tab-all #}
+
+      {# ── Section Rules Tab ── #}
+      <div id="tab-section-rules" style="display:none;">
+        <p style="color:var(--muted-foreground); margin-bottom:var(--space-6);">
+          Section rules determine which timetable a student sees based on their USN.
+          <strong>USN 001–060 → Section A</strong>, etc. You can customise per department.
+        </p>
+
+        <table class="rules-table">
+          <thead>
+            <tr><th>Dept</th><th>Section</th><th>USN Prefix</th><th>USN From</th><th>USN To</th><th>Example</th></tr>
+          </thead>
+          <tbody>
+            {% for r in section_rules %}
+            <tr>
+              <td>{{ r.dept }}</td>
+              <td><span class="badge badge--default">{{ r.section }}</span></td>
+              <td style="font-family:var(--font-mono);">{{ r.usn_prefix }}</td>
+              <td style="font-family:var(--font-mono);">{{ '%03d'|format(r.usn_from) }}</td>
+              <td style="font-family:var(--font-mono);">{{ '%03d'|format(r.usn_to) }}</td>
+              <td style="font-family:var(--font-mono); color:var(--muted-foreground); font-size:var(--text-xs);">
+                {{ r.usn_prefix }}{{ '%03d'|format(r.usn_from) }} → {{ r.usn_prefix }}{{ '%03d'|format(r.usn_to) }}
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" style="text-align:center; color:var(--muted-foreground);">No rules defined.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        {# Add/Edit rule #}
+        <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius-lg); padding:var(--space-6); margin-top:var(--space-6);">
+          <h3 style="font-family:var(--font-display); font-weight:600; margin-bottom:var(--space-5);">Add / Update Section Rule</h3>
+          <form method="POST" action="/timetable/section-rules/update" style="display:flex; flex-direction:column; gap:var(--space-4);">
+            <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:var(--space-4);">
+              <div class="form-group">
+                <label class="form-label" for="r-dept">Department</label>
+                <input class="input" id="r-dept" name="dept" placeholder="ECE" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="r-section">Section</label>
+                <input class="input" id="r-section" name="section" placeholder="A" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="r-prefix">USN Prefix</label>
+                <input class="input" id="r-prefix" name="usn_prefix" placeholder="1AM24EC" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="r-from">USN From #</label>
+                <input class="input" type="number" id="r-from" name="usn_from" placeholder="1" min="1" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="r-to">USN To #</label>
+                <input class="input" type="number" id="r-to" name="usn_to" placeholder="60" min="1" required>
+              </div>
+            </div>
+            <button type="submit" class="btn btn--primary" style="align-self:flex-start;">Save Rule</button>
+          </form>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+  </main>
+
+  {# ── Upload Modal (admin only) ── #}
+  {% if session.get('role') == 'admin' %}
+  <div class="modal-overlay upload-modal" id="tt-upload-modal" role="dialog" aria-modal="true" aria-labelledby="tt-upload-title">
+    <div class="modal">
+      <button class="modal-close" onclick="document.getElementById('tt-upload-modal').classList.remove('open')" aria-label="Close">✕</button>
+      <h2 class="modal-title" id="tt-upload-title">Upload Timetable</h2>
+
+      <form method="POST" action="/timetable/upload" enctype="multipart/form-data"
+            style="display:flex; flex-direction:column; gap:var(--space-5);">
+
+        <div class="form-group">
+          <label class="form-label" for="tt-label">Label / Title</label>
+          <input class="input" type="text" id="tt-label" name="label"
+                 placeholder="e.g. ECE Sec A – 2024 Batch" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="tt-target">Timetable For</label>
+          <select class="select" id="tt-target" name="target_type" onchange="toggleTargetFields(this.value)" required>
+            <option value="student">Students (by section)</option>
+            <option value="teacher">Teacher (individual)</option>
+            <option value="common">Common (all)</option>
+          </select>
+        </div>
+
+        {# Student fields #}
+        <div id="student-fields">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4);">
+            <div class="form-group">
+              <label class="form-label" for="tt-dept">Department</label>
+              <select class="select" id="tt-dept" name="dept">
+                <option value="ECE">ECE</option>
+                <option value="CSE">CSE</option>
+                <option value="ISE">ISE</option>
+                <option value="ME">ME</option>
+                <option value="CIVIL">Civil</option>
+                <option value="EEE">EEE</option>
+                <option value="General">General</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="tt-section">Section</label>
+              <select class="select" id="tt-section" name="section">
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+                <option value="D">D</option>
+                <option value="">All Sections</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {# Teacher field #}
+        <div id="teacher-fields" style="display:none;">
+          <div class="form-group">
+            <label class="form-label" for="tt-teacher">Teacher Login ID</label>
+            <input class="input" type="text" id="tt-teacher" name="teacher_id"
+                   placeholder="e.g. PROF_SHARMA or teacher@campus.edu">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">File (PDF or Image)</label>
+          <div class="drop-zone-wrap" id="tt-drop-zone">
+            <input type="file" name="timetable_file" id="tt-file-input"
+                   accept="application/pdf,image/*" required>
+            <div style="font-size:2rem;">⇪</div>
+            <p style="margin:var(--space-2) 0 0; color:var(--muted-foreground);">Click or drag & drop (PDF/PNG/JPG)</p>
+            <p id="tt-file-chosen" style="font-family:var(--font-mono); font-size:var(--text-xs); color:var(--accent); margin-top:var(--space-2); display:none;"></p>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn--primary btn--lg w-full">Upload Timetable</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function toggleTargetFields(val) {
+      document.getElementById('student-fields').style.display = (val === 'student') ? '' : 'none';
+      document.getElementById('teacher-fields').style.display = (val === 'teacher') ? '' : 'none';
+    }
+    document.getElementById('tt-file-input').addEventListener('change', function () {
+      const el = document.getElementById('tt-file-chosen');
+      if (this.files.length > 0) { el.textContent = '✓ ' + this.files[0].name; el.style.display = 'block'; }
+    });
+    document.getElementById('tt-upload-modal').addEventListener('click', function (e) {
+      if (e.target === this) this.classList.remove('open');
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') document.getElementById('tt-upload-modal').classList.remove('open');
+    });
+  </script>
+  {% endif %}
+
+  {# Admin tab + filter JS #}
+  {% if session.get('role') == 'admin' %}
+  <script>
+    function switchTab(name, btn) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-all').style.display           = (name === 'all') ? '' : 'none';
+      document.getElementById('tab-section-rules').style.display = (name === 'section-rules') ? '' : 'none';
+    }
+    function filterCards() {
+      const dept    = document.getElementById('dept-filter').value.toLowerCase();
+      const section = document.getElementById('section-filter').value.toLowerCase();
+      document.querySelectorAll('.tt-card').forEach(card => {
+        const cd = card.dataset.dept.toLowerCase();
+        const cs = card.dataset.section.toLowerCase();
+        const deptOk    = !dept    || cd === dept;
+        const sectionOk = !section || cs === section;
+        card.style.display = (deptOk && sectionOk) ? '' : 'none';
+      });
+    }
+  </script>
+  {% endif %}
+
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+  <script src="{{ url_for('static', filename='js/toast.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/animations.js') }}"></script>
+</body>
+</html>
