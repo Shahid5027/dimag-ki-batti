@@ -54,10 +54,56 @@ def init_db():
         CREATE TABLE IF NOT EXISTS Leaves (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             teacher_id TEXT NOT NULL,
-            date TEXT NOT NULL,
+            leave_date TEXT NOT NULL,
+            leave_type TEXT NOT NULL DEFAULT 'regular',
+            reason TEXT,
+            status TEXT NOT NULL DEFAULT 'pending',
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+
+    # ── Migrate Leaves table to new schema if needed ──────────────
+    # Check what columns currently exist
+    existing_cols = {row[1] for row in c.execute("PRAGMA table_info(Leaves)").fetchall()}
+
+    needs_migration = 'leave_date' not in existing_cols or 'status' not in existing_cols
+
+    if needs_migration:
+        # Backup old data
+        try:
+            old_rows = c.execute("SELECT * FROM Leaves").fetchall()
+            old_col_names = [row[1] for row in c.execute("PRAGMA table_info(Leaves)").fetchall()]
+        except Exception:
+            old_rows = []
+            old_col_names = []
+
+        # Drop and recreate with new schema
+        c.execute("DROP TABLE IF EXISTS Leaves")
+        c.execute('''
+            CREATE TABLE Leaves (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                teacher_id TEXT NOT NULL,
+                leave_date TEXT NOT NULL DEFAULT '',
+                leave_type TEXT NOT NULL DEFAULT 'regular',
+                reason TEXT,
+                status TEXT NOT NULL DEFAULT 'pending',
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # Restore old data — map old 'date' column to new 'leave_date'
+        if old_rows and old_col_names:
+            col_map = {name: idx for idx, name in enumerate(old_col_names)}
+            for row in old_rows:
+                tid = row[col_map.get('teacher_id', 0)] if 'teacher_id' in col_map else ''
+                old_date = row[col_map['date']] if 'date' in col_map else ''
+                ts = row[col_map['timestamp']] if 'timestamp' in col_map else ''
+                if tid:
+                    c.execute(
+                        "INSERT INTO Leaves (teacher_id, leave_date, leave_type, status, timestamp) VALUES (?, ?, 'regular', 'approved', ?)",
+                        (tid, old_date or '', ts)
+                    )
+
     conn.commit()
     conn.close()
 
@@ -115,7 +161,7 @@ QR_TEMPLATE = """
     <footer style="margin-top: 40px; font-size: 14px; color: #666;">
         <hr style="width: 60%; border: 0.5px solid #ccc;">
         <div style="margin-top: 10px;">
-            Developed by <strong>Team RAGE</strong> | Department of ECE | AMC Engineering College
+            Developed by <strong>Team Dimag Ki Batti</strong> | Department of ECE | AMC Engineering College
         </div>
     </footer>
 
@@ -357,28 +403,111 @@ def mark_attendance(usn, flask_session_label, device_id, token):
     resp.set_cookie("user_usn", usn, max_age=31536000)
     return resp
 
-@attendance_bp.route("/take_leave", methods=["POST"])
+@attendance_bp.route("/take_leave", methods=["GET", "POST"])
 def take_leave():
     if session.get('role') != 'faculty':
         flash("Unauthorized access. Only faculty can take leave.")
         return redirect(url_for('index'))
 
+    if request.method == "GET":
+        # Render the leave form (handled in attendance_faculty.html with today as min date)
+        return redirect(url_for('attendance.faculty_report'))
+
     init_db()
     teacher_id = session.get('id')
-    today_date = datetime.now().strftime("%Y-%m-%d")
+    leave_date_str = request.form.get('leave_date', '').strip()
+    leave_type = request.form.get('leave_type', 'regular').strip()
+    reason = request.form.get('reason', '').strip()
+
+    # ── Validate date ─────────────────────────────────────
+    now_ist = datetime.now(ZoneInfo("Asia/Kolkata"))
+    today_str = now_ist.strftime("%Y-%m-%d")
+
+    if not leave_date_str:
+        flash("Please select a leave date.", "error")
+        return redirect(url_for('attendance.faculty_report'))
+
+    try:
+        leave_date = datetime.strptime(leave_date_str, "%Y-%m-%d")
+    except ValueError:
+        flash("Invalid date format.", "error")
+        return redirect(url_for('attendance.faculty_report'))
+
+    if leave_date_str < today_str:
+        flash("❌ Cannot apply for leave on a past date.", "error")
+        return redirect(url_for('attendance.faculty_report'))
+
+    # ── Enforce 12-hour / 1-hour rules ────────────────────
+    # Build the leave date's midnight (00:00 IST)
+    leave_midnight = datetime(
+        leave_date.year, leave_date.month, leave_date.day,
+        0, 0, 0, tzinfo=ZoneInfo("Asia/Kolkata")
+    )
+    hours_until = (leave_midnight - now_ist).total_seconds() / 3600
+
+    if leave_type == 'regular':
+        if hours_until < 12:
+            flash("❌ Regular leave must be applied at least 12 hours in advance. "
+                  "Use 'Emergency' leave for urgent requests.", "error")
+            return redirect(url_for('attendance.faculty_report'))
+    elif leave_type == 'emergency':
+        if hours_until < 1:
+            flash("❌ Emergency leave must be applied at least 1 hour in advance.", "error")
+            return redirect(url_for('attendance.faculty_report'))
+    else:
+        flash("❌ Invalid leave type.", "error")
+        return redirect(url_for('attendance.faculty_report'))
 
     conn = get_db()
     c = conn.cursor()
-    c.execute('SELECT * FROM Leaves WHERE teacher_id = ? AND date = ?', (teacher_id, today_date))
+
+    # No duplicate leaves for same date
+    c.execute('SELECT * FROM Leaves WHERE teacher_id = ? AND leave_date = ?',
+              (teacher_id, leave_date_str))
     if c.fetchone():
-        msg = "⚠️ You have already marked yourself ON LEAVE for today."
-    else:
-        c.execute('INSERT INTO Leaves (teacher_id, date) VALUES (?, ?)', (teacher_id, today_date))
-        conn.commit()
-        msg = f"✅ Success. Teacher {teacher_id} is marked ON LEAVE for {today_date}."
+        conn.close()
+        flash("⚠️ You have already applied for leave on this date.", "warning")
+        return redirect(url_for('attendance.faculty_report'))
+
+    c.execute(
+        'INSERT INTO Leaves (teacher_id, leave_date, leave_type, reason, status) VALUES (?, ?, ?, ?, ?)',
+        (teacher_id, leave_date_str, leave_type, reason, 'pending')
+    )
+    conn.commit()
     conn.close()
 
-    return render_template('attendance_success.html', message=msg)
+    flash(f"✅ Leave request submitted for {leave_date_str}. Awaiting admin approval.", "success")
+    return redirect(url_for('attendance.faculty_report'))
+
+
+@attendance_bp.route("/admin/approve_leave/<int:leave_id>", methods=["POST"])
+def approve_leave(leave_id):
+    if session.get('role') != 'admin':
+        flash("Unauthorized access.", "error")
+        return redirect(url_for('index'))
+
+    init_db()
+    conn = get_db()
+    conn.execute("UPDATE Leaves SET status = 'approved' WHERE id = ?", (leave_id,))
+    conn.commit()
+    conn.close()
+    flash("✅ Leave approved.", "success")
+    return redirect(url_for('attendance.admin'))
+
+
+@attendance_bp.route("/admin/reject_leave/<int:leave_id>", methods=["POST"])
+def reject_leave(leave_id):
+    if session.get('role') != 'admin':
+        flash("Unauthorized access.", "error")
+        return redirect(url_for('index'))
+
+    init_db()
+    conn = get_db()
+    conn.execute("UPDATE Leaves SET status = 'rejected' WHERE id = ?", (leave_id,))
+    conn.commit()
+    conn.close()
+    flash("❌ Leave rejected.", "success")
+    return redirect(url_for('attendance.admin'))
 
 
 @attendance_bp.route("/faculty")
@@ -424,7 +553,17 @@ def faculty_report():
     unique_students = len(sorted_usns)
     total_present = len(att_records)
 
+    # This teacher's leave history
+    teacher_id = session.get('id')
+    c.execute("SELECT * FROM Leaves WHERE teacher_id = ? ORDER BY leave_date DESC", (teacher_id,))
+    my_leaves = c.fetchall()
+
     conn.close()
+
+    # Date info for the leave form
+    now_ist = datetime.now(ZoneInfo("Asia/Kolkata"))
+    today_str = now_ist.strftime("%Y-%m-%d")
+    today_display = now_ist.strftime("%d/%m/%Y")
 
     return render_template('attendance_faculty.html',
         teacher_id=session.get('id', 'Faculty'),
@@ -433,7 +572,10 @@ def faculty_report():
         unique_students=unique_students,
         sessions=sessions,
         sorted_usns=sorted_usns,
-        att_matrix=att_matrix
+        att_matrix=att_matrix,
+        my_leaves=my_leaves,
+        today_str=today_str,
+        today_display=today_display
     )
 
 @attendance_bp.route("/faculty/download")
@@ -497,7 +639,9 @@ def admin():
     c.execute('SELECT * FROM Attendance ORDER BY timestamp DESC')
     att_rows = c.fetchall()
 
-    c.execute('SELECT * FROM Leaves ORDER BY timestamp DESC')
+    c.execute("""SELECT * FROM Leaves
+                 ORDER BY CASE status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 ELSE 2 END,
+                 timestamp DESC""")
     leave_rows = c.fetchall()
 
     conn.close()

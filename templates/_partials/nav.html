@@ -35,6 +35,10 @@
       Notes
     </a>
 
+    <a href="/queries/" class="nav-link {% if request.path.startswith('/queries') %}active{% endif %}" role="listitem">
+      Query Board
+    </a>
+
     {% if session.get('role') == 'admin' %}
     <a href="/attendance/admin" class="nav-link {% if '/admin' in request.path %}active{% endif %}" role="listitem">
       Admin

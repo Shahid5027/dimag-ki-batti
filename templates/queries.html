@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {% include '_partials/head.html' %}
+  {% set page_title = "Campus Query Board" %}
+  <style>
+    /* ── Live Clock ── */
+    #live-clock {
+      font-family: var(--font-mono);
+      font-size: var(--text-sm);
+      color: var(--accent);
+      background: var(--accent-light);
+      padding: 4px 12px;
+      border-radius: 999px;
+      letter-spacing: 0.06em;
+    }
+
+    /* ── Query Card ── */
+    .query-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5) var(--space-6);
+      display: flex;
+      gap: var(--space-5);
+      align-items: flex-start;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      position: relative;
+    }
+    .query-card:hover { border-color: var(--accent); box-shadow: var(--shadow-sm); }
+
+    /* ── Upvote button ── */
+    .upvote-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      background: none;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: var(--space-2) var(--space-3);
+      cursor: pointer;
+      min-width: 56px;
+      color: var(--muted-foreground);
+      font-family: var(--font-mono);
+      font-size: var(--text-sm);
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .upvote-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+    .upvote-btn.voted {
+      border-color: var(--accent);
+      background: var(--accent-light);
+      color: var(--accent);
+    }
+    .upvote-icon { font-size: 1.1rem; line-height: 1; }
+    .upvote-count { font-weight: 700; font-size: var(--text-base); line-height: 1; }
+
+    /* ── Query body ── */
+    .query-body { flex: 1; min-width: 0; }
+    .query-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-2);
+      margin-bottom: var(--space-2);
+    }
+    .query-usn {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-light);
+      padding: 2px 8px;
+      border-radius: 999px;
+      letter-spacing: 0.04em;
+    }
+    .query-time {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: var(--muted-foreground);
+    }
+    .query-category {
+      font-size: var(--text-xs);
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: var(--muted-foreground);
+      font-weight: 500;
+    }
+    .query-text {
+      font-size: var(--text-sm);
+      line-height: 1.6;
+      color: var(--foreground);
+      word-break: break-word;
+    }
+
+    /* ── Priority indicator ── */
+    .priority-bar {
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 4px;
+      border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+      background: var(--border);
+    }
+    .priority-high .priority-bar { background: var(--destructive); }
+    .priority-medium .priority-bar { background: var(--warning); }
+    .priority-low .priority-bar { background: var(--success); }
+
+    /* ── Sort & Filter bar ── */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      flex-wrap: wrap;
+      margin-bottom: var(--space-6);
+    }
+    .filter-btn {
+      padding: 6px 16px;
+      border-radius: 999px;
+      border: 1.5px solid var(--border);
+      background: none;
+      font-size: var(--text-xs);
+      font-family: var(--font-mono);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      color: var(--muted-foreground);
+      text-decoration: none;
+      transition: all 0.15s;
+    }
+    .filter-btn:hover, .filter-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-light);
+    }
+
+    /* ── Submit form ── */
+    .submit-panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+      margin-bottom: var(--space-8);
+    }
+    .category-chips {
+      display: flex;
+      gap: var(--space-2);
+      flex-wrap: wrap;
+      margin-bottom: var(--space-4);
+    }
+    .category-chip {
+      padding: 4px 14px;
+      border-radius: 999px;
+      border: 1.5px solid var(--border);
+      background: none;
+      font-size: var(--text-xs);
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--muted-foreground);
+      transition: all 0.15s;
+    }
+    .category-chip.selected,
+    .category-chip:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-light);
+    }
+    #category-input { display: none; }
+
+    /* ── Clear btn (admin) ── */
+    .clear-btn {
+      padding: 4px 12px;
+      font-size: var(--text-xs);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--destructive);
+      background: none;
+      color: var(--destructive);
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      transition: all 0.15s;
+    }
+    .clear-btn:hover { background: var(--destructive); color: #fff; }
+
+    .queries-list { display: flex; flex-direction: column; gap: var(--space-3); }
+  </style>
+</head>
+<body style="display:flex; flex-direction:column; min-height:100vh;">
+  {% include '_partials/nav.html' %}
+
+  <main style="flex:1; padding:var(--space-12) 0;">
+    <div class="container reveal visible">
+
+      <!-- Header -->
+      <div class="section-heading" style="margin-bottom:var(--space-8);">
+        <div>
+          <h2 style="font-family:var(--font-display); font-size:var(--text-4xl);">Query Board.</h2>
+          <p class="text-label" style="margin-top:var(--space-2);">Campus issues · sorted by votes</p>
+        </div>
+        <div style="display:flex; align-items:center; gap:var(--space-4);">
+          <span id="live-clock">--:--:--</span>
+          {% if session.get('role') == 'admin' %}
+          <form action="/queries/admin/clear-all" method="POST" onsubmit="return confirm('Clear ALL open queries?')">
+            <button type="submit" class="btn btn--destructive" style="font-size:var(--text-xs);">🗑 Clear All</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Flash messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div style="margin-bottom:var(--space-4);">
+        {% for category, msg in messages %}
+        <div class="flash-alert flash-alert--{{ 'success' if category == 'success' else 'error' }}" style="margin-bottom:var(--space-2);">
+          {{ msg }}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% endwith %}
+
+      <!-- Submit Query -->
+      <div class="submit-panel">
+        <p style="font-weight:600; font-size:var(--text-base); margin-bottom:var(--space-3);">📢 Raise a Campus Issue</p>
+        <form action="/queries/submit" method="POST">
+          <!-- Category chips -->
+          <input type="hidden" name="category" id="category-input" value="General">
+          <div class="category-chips" id="category-chips">
+            {% for cat in ['General', 'Lift / Elevator', 'Water / Washroom', 'Electricity', 'Classroom', 'Wi-Fi / Network', 'Canteen', 'Safety', 'Other'] %}
+            <button type="button" class="category-chip {% if loop.first %}selected{% endif %}"
+                    onclick="selectCat(this, '{{ cat }}')">{{ cat }}</button>
+            {% endfor %}
+          </div>
+          <!-- Message -->
+          <div style="display:flex; gap:var(--space-3); align-items:flex-end;">
+            <div class="form-group" style="flex:1; margin-bottom:0;">
+              <textarea class="input" name="message" id="query-message" rows="2"
+                        placeholder="Describe the issue clearly, e.g. 'Lift on Block B is stuck since morning…'"
+                        maxlength="500" required
+                        style="resize:vertical; min-height:70px; font-size:var(--text-sm);"></textarea>
+              <div style="display:flex; justify-content:space-between; margin-top:4px;">
+                <span style="font-size:var(--text-xs); color:var(--muted-foreground);">
+                  Posting as <strong>{{ current_usn or 'You' }}</strong>
+                </span>
+                <span id="char-count" style="font-size:var(--text-xs); font-family:var(--font-mono); color:var(--muted-foreground);">0 / 500</span>
+              </div>
+            </div>
+            <button type="submit" class="btn btn--primary" style="height:70px; padding:0 var(--space-6); white-space:nowrap;">
+              Submit →
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Sort & Filter bar -->
+      <div class="filter-bar">
+        <span style="font-size:var(--text-xs); color:var(--muted-foreground); font-family:var(--font-mono);">SORT:</span>
+        <a href="/queries/?sort=votes{% if category_filter %}&category={{ category_filter }}{% endif %}"
+           class="filter-btn {% if sort == 'votes' %}active{% endif %}">🔥 Most Votes</a>
+        <a href="/queries/?sort=time{% if category_filter %}&category={{ category_filter }}{% endif %}"
+           class="filter-btn {% if sort == 'time' %}active{% endif %}">🕐 Newest</a>
+        {% if categories %}
+        <span style="font-size:var(--text-xs); color:var(--muted-foreground); font-family:var(--font-mono); margin-left:var(--space-2);">FILTER:</span>
+        <a href="/queries/?sort={{ sort }}"
+           class="filter-btn {% if not category_filter %}active{% endif %}">All</a>
+        {% for cat in categories %}
+        <a href="/queries/?sort={{ sort }}&category={{ cat }}"
+           class="filter-btn {% if category_filter == cat %}active{% endif %}">{{ cat }}</a>
+        {% endfor %}
+        {% endif %}
+      </div>
+
+      <!-- Queries List -->
+      {% if rows %}
+      <div class="queries-list" id="queries-list">
+        {% for row in rows %}
+        {% set votes = row['upvotes'] %}
+        {% set priority_class = 'priority-high' if votes >= 5 else ('priority-medium' if votes >= 2 else 'priority-low') %}
+        <div class="query-card {{ priority_class }}" id="qcard-{{ row['id'] }}">
+          <div class="priority-bar"></div>
+
+          <!-- Upvote button -->
+          <button class="upvote-btn {% if row['id'] in upvoted_ids %}voted{% endif %}"
+                  id="upvote-btn-{{ row['id'] }}"
+                  onclick="doUpvote({{ row['id'] }}, this)"
+                  {% if not session.get('role') %}disabled title="Login to upvote"{% endif %}>
+            <span class="upvote-icon">▲</span>
+            <span class="upvote-count" id="upvote-count-{{ row['id'] }}">{{ votes }}</span>
+          </button>
+
+          <!-- Query content -->
+          <div class="query-body">
+            <div class="query-meta">
+              <span class="query-usn">{{ row['usn'] }}</span>
+              <span class="query-time">🕐 {{ row['timestamp'] }}</span>
+              <span class="query-category">{{ row['category'] }}</span>
+              {% if votes >= 5 %}
+              <span class="badge badge--destructive" style="font-size:10px;">🔥 High Priority</span>
+              {% elif votes >= 2 %}
+              <span class="badge badge--warning" style="font-size:10px;">⚡ Trending</span>
+              {% endif %}
+            </div>
+            <p class="query-text">{{ row['message'] }}</p>
+          </div>
+
+          <!-- Admin clear button -->
+          {% if session.get('role') == 'admin' %}
+          <form action="/queries/admin/clear/{{ row['id'] }}" method="POST" style="flex-shrink:0;">
+            <button type="submit" class="clear-btn" title="Mark resolved">✓ Clear</button>
+          </form>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state" style="padding:var(--space-16);">
+        <div class="empty-state-icon">📭</div>
+        <h3 class="empty-state-title">No Open Queries</h3>
+        <p class="empty-state-desc">All clear! Be the first to raise a campus issue.</p>
+      </div>
+      {% endif %}
+
+    </div>
+  </main>
+
+  <script>
+    // ── Live Clock ──────────────────────────────────────────────
+    function updateClock() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+      });
+      const dateStr = now.toLocaleDateString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit', month: '2-digit', year: 'numeric'
+      });
+      const el = document.getElementById('live-clock');
+      if (el) el.textContent = dateStr.replace(/\//g, '/') + ' ' + timeStr;
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // ── Category chips ──────────────────────────────────────────
+    function selectCat(el, cat) {
+      document.querySelectorAll('.category-chip').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      document.getElementById('category-input').value = cat;
+    }
+
+    // ── Char counter ────────────────────────────────────────────
+    const msgEl = document.getElementById('query-message');
+    const countEl = document.getElementById('char-count');
+    if (msgEl) {
+      msgEl.addEventListener('input', () => {
+        const len = msgEl.value.length;
+        countEl.textContent = len + ' / 500';
+        countEl.style.color = len > 450 ? 'var(--destructive)' : 'var(--muted-foreground)';
+      });
+    }
+
+    // ── Upvote (AJAX) ───────────────────────────────────────────
+    function doUpvote(queryId, btn) {
+      btn.disabled = true;
+      fetch('/queries/upvote/' + queryId, { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) { alert(data.error); btn.disabled = false; return; }
+          document.getElementById('upvote-count-' + queryId).textContent = data.upvotes;
+          if (data.voted) {
+            btn.classList.add('voted');
+          } else {
+            btn.classList.remove('voted');
+          }
+          btn.disabled = false;
+          // Update priority class
+          const card = document.getElementById('qcard-' + queryId);
+          card.classList.remove('priority-high', 'priority-medium', 'priority-low');
+          if (data.upvotes >= 5) card.classList.add('priority-high');
+          else if (data.upvotes >= 2) card.classList.add('priority-medium');
+          else card.classList.add('priority-low');
+        })
+        .catch(() => { btn.disabled = false; });
+    }
+  </script>
+  <script src="{{ url_for('static', filename='js/animations.js') }}"></script>
+</body>
+</html>

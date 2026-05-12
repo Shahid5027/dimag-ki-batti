@@ -13,7 +13,7 @@
       <div class="section-heading">
         <div>
           <h2 style="font-family:var(--font-display); font-size:var(--text-4xl);">Admin Hub.</h2>
-          <p class="text-label" style="margin-top:var(--space-2);">System Logs & Analytics</p>
+          <p class="text-label" style="margin-top:var(--space-2);">System Logs &amp; Analytics</p>
         </div>
       </div>
 
@@ -52,7 +52,7 @@
           </div>
 
           <div class="flex items-center justify-between" style="margin-bottom:var(--space-4);">
-            <h3 style="font-size:var(--text-xl);">Device & Session Reset</h3>
+            <h3 style="font-size:var(--text-xl);">Device &amp; Session Reset</h3>
           </div>
           <div class="card">
             <form action="/attendance/admin/reset_device" method="POST" style="display:flex; gap:var(--space-4); align-items:flex-end; flex-wrap:wrap;">
@@ -66,11 +66,11 @@
           </div>
         </section>
 
-        <!-- Faculty Leaves -->
+        <!-- Faculty Leave Approvals -->
         <section>
           <div class="flex items-center justify-between" style="margin-bottom:var(--space-4);">
-            <h3 style="font-size:var(--text-xl);">Teacher Leaves</h3>
-            <span class="badge badge--destructive">Live</span>
+            <h3 style="font-size:var(--text-xl);">Teacher Leave Requests</h3>
+            <span class="badge badge--warning">Requires Approval</span>
           </div>
           
           <div class="card" style="padding:0; overflow:hidden;">
@@ -79,25 +79,58 @@
                 <thead>
                   <tr>
                     <th>Teacher ID</th>
-                    <th>Date</th>
+                    <th>Leave Date</th>
+                    <th>Type</th>
+                    <th>Reason</th>
+                    <th>Applied At</th>
                     <th>Status</th>
-                    <th>Timestamp</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {% for row in leave_rows %}
                   <tr>
                     <td style="font-weight:500;">{{ row['teacher_id'] }}</td>
-                    <td>{{ row['date'] }}</td>
-                    <td><span class="badge badge--destructive">ON Leave</span></td>
-                    <td class="text-muted">{{ row['timestamp'] }}</td>
+                    <td style="font-family:var(--font-mono);">{{ row['leave_date'] }}</td>
+                    <td>
+                      {% if row['leave_type'] == 'emergency' %}
+                      <span class="badge badge--destructive">Emergency</span>
+                      {% else %}
+                      <span class="badge badge--default">Regular</span>
+                      {% endif %}
+                    </td>
+                    <td class="text-muted" style="max-width:200px; white-space:pre-wrap; word-break:break-word;">{{ row['reason'] or '—' }}</td>
+                    <td class="text-muted" style="font-size:var(--text-xs);">{{ row['timestamp'] }}</td>
+                    <td>
+                      {% if row['status'] == 'approved' %}
+                      <span class="badge badge--success">Approved</span>
+                      {% elif row['status'] == 'rejected' %}
+                      <span class="badge badge--destructive">Rejected</span>
+                      {% else %}
+                      <span class="badge badge--warning">Pending</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if row['status'] == 'pending' %}
+                      <div style="display:flex; gap:var(--space-2);">
+                        <form action="/attendance/admin/approve_leave/{{ row['id'] }}" method="POST" style="display:inline;">
+                          <button type="submit" class="btn btn--primary" style="padding:4px 12px; font-size:var(--text-xs);">✓ Approve</button>
+                        </form>
+                        <form action="/attendance/admin/reject_leave/{{ row['id'] }}" method="POST" style="display:inline;">
+                          <button type="submit" class="btn btn--destructive" style="padding:4px 12px; font-size:var(--text-xs);">✗ Reject</button>
+                        </form>
+                      </div>
+                      {% else %}
+                      <span class="text-muted" style="font-size:var(--text-xs);">—</span>
+                      {% endif %}
+                    </td>
                   </tr>
                   {% else %}
                   <tr>
-                    <td colspan="4">
+                    <td colspan="7">
                       <div class="empty-state" style="padding:var(--space-10) var(--space-4);">
                         <div class="empty-state-icon">✓</div>
-                        <h3 class="empty-state-title" style="font-size:var(--text-base);">No Leaves Recorded</h3>
+                        <h3 class="empty-state-title" style="font-size:var(--text-base);">No Leave Requests</h3>
                       </div>
                     </td>
                   </tr>

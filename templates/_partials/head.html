@@ -7,6 +7,11 @@
 <meta name="description" content="{{ page_description | default('AMC Engineering College — Campus Digital Ecosystem') }}">
 <title>{{ page_title | default('Campus Ecosystem') }} · AMCEC</title>
 
+{# ── Google Fonts — preconnect first for speed, then load ── #}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,700;1,9..144,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
 {# Design system CSS — always in this order #}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">

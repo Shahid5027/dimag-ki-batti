@@ -111,6 +111,7 @@
       min-height: 100vh;
       display: grid;
       grid-template-columns: 1fr 1fr;
+      align-items: center;   /* vertically centers both panels to each other */
     }
 
     @media (max-width: 768px) {
@@ -180,6 +181,8 @@
       letter-spacing: -0.04em;
       color: oklch(0.96 0.005 80);
       margin: 0 0 var(--space-6);
+      /* Proper text alignment — left-aligned within centered container */
+      text-align: left;
     }
 
     .login-tagline h1 em {
@@ -193,6 +196,7 @@
       color: oklch(0.55 0.01 265);
       line-height: 1.6;
       max-width: 340px;
+      text-align: left;
     }
 
     .login-footer-hints {
@@ -216,6 +220,8 @@
       align-items: center;
       justify-content: center;
       padding: var(--space-12) var(--space-10);
+      /* True screen-center alignment */
+      min-height: 100vh;
     }
 
     .login-card {
@@ -461,6 +467,10 @@
 
     .card-footer-text strong {
       color: oklch(0.42 0.01 265);
+      white-space: nowrap;
+      display: block;
+      font-size: 10px;
+      letter-spacing: 0.04em;
     }
 
     .theme-pill {
@@ -588,7 +598,7 @@
         <div class="card-footer">
           <div class="card-footer-text">
             AMC Engineering College<br>
-            <strong>Campus Digital Ecosystem v2.0</strong>
+            <strong>Campus Ecosystem · Team Dimag Ki Batti</strong>
           </div>
           <button class="theme-pill" onclick="toggleTheme()" aria-label="Toggle theme">◑ Theme</button>
         </div>

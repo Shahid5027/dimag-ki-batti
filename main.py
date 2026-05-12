@@ -1,10 +1,13 @@
 from flask import Flask, render_template, request, session, redirect, url_for, flash, send_from_directory, abort
 from datetime import timedelta, datetime
 import sqlite3, os
+from dotenv import load_dotenv
+load_dotenv()
 
 from routes.study_api import study_bp
 from routes.attendance_api import attendance_bp
 from routes.auth_api import auth_bp
+from routes.queries_api import queries_bp
 
 app = Flask(__name__)
 # Configurations
@@ -52,6 +55,7 @@ init_notes_db()
 app.register_blueprint(auth_bp)
 app.register_blueprint(study_bp, url_prefix='/study')
 app.register_blueprint(attendance_bp, url_prefix='/attendance')
+app.register_blueprint(queries_bp, url_prefix='/queries')
 
 @app.before_request
 def require_login():

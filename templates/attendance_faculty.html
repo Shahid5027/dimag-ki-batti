@@ -3,6 +3,44 @@
 <head>
   {% include '_partials/head.html' %}
   {% set page_title = "Faculty — Attendance Report" %}
+  <style>
+    .leave-form-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+      margin-bottom: var(--space-8);
+    }
+    .leave-type-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+    }
+    .leave-type-option { display: flex; align-items: center; gap: var(--space-2); }
+    .leave-type-option input[type="radio"] { accent-color: var(--accent); width: 18px; height: 18px; cursor: pointer; }
+    .leave-type-option label { cursor: pointer; font-size: var(--text-sm); font-weight: 500; }
+    .leave-hint {
+      font-size: var(--text-xs);
+      color: var(--muted-foreground);
+      font-family: var(--font-mono);
+      padding: var(--space-2) var(--space-3);
+      background: var(--muted);
+      border-radius: var(--radius-sm);
+      margin-top: var(--space-2);
+      border-left: 3px solid var(--accent);
+    }
+    .leave-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: var(--text-xs);
+      font-weight: 600;
+      font-family: var(--font-mono);
+    }
+  </style>
 </head>
 <body style="display:flex; flex-direction:column; min-height:100vh;">
   {% include '_partials/nav.html' %}
@@ -20,6 +58,19 @@
           <a href="/attendance/generate" class="btn btn--primary">Generate QR</a>
         </div>
       </div>
+
+      <!-- Flash messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div style="margin-bottom:var(--space-6);">
+        {% for category, msg in messages %}
+        <div class="flash-alert flash-alert--{{ 'success' if category == 'success' else ('warning' if category == 'warning' else 'error') }}" style="margin-bottom:var(--space-2);">
+          {{ msg }}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% endwith %}
 
       <!-- Summary Stats Row -->
       <div style="display:grid; grid-template-columns: repeat(3,1fr); gap:var(--space-4); margin-bottom:var(--space-8);">
@@ -39,6 +90,107 @@
           <span class="stat-sub">Registered &amp; active</span>
         </div>
       </div>
+
+      <!-- ── Leave Request Form ── -->
+      <h3 style="font-size:var(--text-xl); margin-bottom:var(--space-4);">Apply for Leave</h3>
+      <div class="leave-form-card">
+        <form action="/attendance/take_leave" method="POST">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-6); margin-bottom:var(--space-5);">
+
+            <!-- Date Picker -->
+            <div class="form-group">
+              <label class="form-label" for="leave_date">Leave Date</label>
+              <input class="input" type="date" id="leave_date" name="leave_date"
+                     min="{{ today_str }}" required
+                     style="cursor:pointer;">
+              <p style="font-size:var(--text-xs); color:var(--muted-foreground); margin-top:var(--space-1);">
+                Today: <strong>{{ today_display }}</strong> · Past dates are disabled.
+              </p>
+            </div>
+
+            <!-- Reason -->
+            <div class="form-group">
+              <label class="form-label" for="reason">Reason (optional)</label>
+              <input class="input" type="text" id="reason" name="reason" placeholder="e.g. Medical appointment…">
+            </div>
+          </div>
+
+          <!-- Leave Type -->
+          <div style="margin-bottom:var(--space-5);">
+            <p class="form-label" style="margin-bottom:var(--space-3);">Leave Type</p>
+            <div class="leave-type-grid">
+              <div style="border:1px solid var(--border); border-radius:var(--radius-md); padding:var(--space-4); cursor:pointer;" onclick="selectLeaveType('regular')">
+                <div class="leave-type-option">
+                  <input type="radio" id="leave_regular" name="leave_type" value="regular" checked onchange="updateHint()">
+                  <label for="leave_regular">
+                    <strong>Regular Leave</strong><br>
+                    <span style="color:var(--muted-foreground); font-size:var(--text-xs);">Must apply ≥12 hours before</span>
+                  </label>
+                </div>
+              </div>
+              <div style="border:1px solid var(--border); border-radius:var(--radius-md); padding:var(--space-4); cursor:pointer;" onclick="selectLeaveType('emergency')">
+                <div class="leave-type-option">
+                  <input type="radio" id="leave_emergency" name="leave_type" value="emergency" onchange="updateHint()">
+                  <label for="leave_emergency">
+                    <strong style="color:var(--destructive);">Emergency Leave</strong><br>
+                    <span style="color:var(--muted-foreground); font-size:var(--text-xs);">Must apply ≥1 hour before</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div id="leave-hint" class="leave-hint">
+              📋 Regular leave: Apply at least <strong>12 hours</strong> before the leave date begins (midnight IST).
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn--primary">Submit Leave Request</button>
+        </form>
+      </div>
+
+      <!-- ── My Leave History ── -->
+      {% if my_leaves %}
+      <h3 style="font-size:var(--text-xl); margin-bottom:var(--space-4);">My Leave History</h3>
+      <div class="card" style="padding:0; overflow:hidden; margin-bottom:var(--space-8);">
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Leave Date</th>
+                <th>Type</th>
+                <th>Reason</th>
+                <th>Applied At</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in my_leaves %}
+              <tr>
+                <td style="font-family:var(--font-mono);">{{ row['leave_date'] }}</td>
+                <td>
+                  {% if row['leave_type'] == 'emergency' %}
+                  <span class="badge badge--destructive">Emergency</span>
+                  {% else %}
+                  <span class="badge badge--default">Regular</span>
+                  {% endif %}
+                </td>
+                <td class="text-muted">{{ row['reason'] or '—' }}</td>
+                <td class="text-muted" style="font-size:var(--text-xs);">{{ row['timestamp'] }}</td>
+                <td>
+                  {% if row['status'] == 'approved' %}
+                  <span class="badge badge--success">✓ Approved</span>
+                  {% elif row['status'] == 'rejected' %}
+                  <span class="badge badge--destructive">✗ Rejected</span>
+                  {% else %}
+                  <span class="badge badge--warning">⏳ Pending</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
 
       <!-- Pivot Table / Register View -->
       <h3 style="font-size:var(--text-xl); margin-bottom:var(--space-4);">Attendance Register</h3>
@@ -97,6 +249,23 @@
     </div>
   </main>
 
+  <script>
+    function selectLeaveType(type) {
+      document.getElementById('leave_' + type).checked = true;
+      updateHint();
+    }
+    function updateHint() {
+      const hint = document.getElementById('leave-hint');
+      const isEmergency = document.getElementById('leave_emergency').checked;
+      if (isEmergency) {
+        hint.innerHTML = '🚨 Emergency leave: Apply at least <strong>1 hour</strong> before the leave date. Use only for genuine emergencies.';
+        hint.style.borderLeftColor = 'var(--destructive)';
+      } else {
+        hint.innerHTML = '📋 Regular leave: Apply at least <strong>12 hours</strong> before the leave date begins (midnight IST).';
+        hint.style.borderLeftColor = 'var(--accent)';
+      }
+    }
+  </script>
   <script src="{{ url_for('static', filename='js/animations.js') }}"></script>
 </body>
 </html>

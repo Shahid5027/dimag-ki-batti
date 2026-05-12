@@ -382,18 +382,26 @@
           <span class="module-action">Browse PDFs</span>
         </a>
 
-        {# Take Leave — faculty only, placed last #}
+        {# Query Board — available to all logged-in users #}
+        <a href="/queries/" class="module-card reveal" aria-label="Campus Query Board">
+          <span class="module-icon">📢</span>
+          <div>
+            <h2 class="module-title">Query Board</h2>
+            <p class="module-desc">Report campus issues like lift outages, water problems and more. Upvote to prioritize.</p>
+          </div>
+          <span class="module-action">View Queries</span>
+        </a>
+
+        {# Take Leave — faculty only, links to faculty page with the proper form #}
         {% if session.get('role') == 'faculty' %}
-        <form action="/attendance/take_leave" method="POST" style="display:contents">
-          <button type="submit" class="module-card reveal" aria-label="Mark leave for today">
-            <span class="module-icon">◻</span>
-            <div>
-              <h2 class="module-title" style="color:var(--destructive)">Take Leave</h2>
-              <p class="module-desc">Mark yourself as on leave for today. This will be visible to students and admin.</p>
-            </div>
-            <span class="module-action" style="color:var(--destructive)">Submit Leave</span>
-          </button>
-        </form>
+        <a href="/attendance/faculty" class="module-card reveal" aria-label="Apply for leave">
+          <span class="module-icon">◻</span>
+          <div>
+            <h2 class="module-title" style="color:var(--destructive)">Apply for Leave</h2>
+            <p class="module-desc">Select a date &amp; type (Regular / Emergency) and submit for admin approval.</p>
+          </div>
+          <span class="module-action" style="color:var(--destructive)">Open Leave Form</span>
+        </a>
         {% endif %}
 
       </div>
@@ -516,7 +524,7 @@
 
   <footer style="border-top:1px solid var(--border); padding:var(--space-8) 0; text-align:center;">
     <p style="font-family:var(--font-mono);font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.08em;color:var(--muted-foreground)">
-      AMC Engineering College · Dept. of ECE · Built by Team RAGE
+      AMC Engineering College · Dept. of ECE · Built by Team Dimag Ki Batti
     </p>
   </footer>
 

@@ -90,7 +90,7 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-
   transition: background-color var(--duration-slow) var(--ease-out);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  background-color: oklch(from var(--background) l c h / 0.90);
+  background-color: oklch(0.975 0.005 80 / 0.90);
 }
 
 .nav-brand {
@@ -198,7 +198,7 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-
   color: var(--accent-foreground);
   border-color: var(--accent);
 }
-.btn--primary:hover { background: oklch(from var(--accent) calc(l - 0.06) c h); opacity: 1; }
+.btn--primary:hover { background: oklch(0.34 0.200 275); opacity: 1; }
 
 .btn--ghost {
   background: transparent;
@@ -219,14 +219,14 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-
   color: white;
   border-color: var(--destructive);
 }
-.btn--destructive:hover { background: oklch(from var(--destructive) calc(l - 0.06) c h); opacity: 1; }
+.btn--destructive:hover { background: oklch(0.44 0.200 25); opacity: 1; }
 
 .btn--success {
   background: var(--success);
   color: white;
   border-color: var(--success);
 }
-.btn--success:hover { background: oklch(from var(--success) calc(l - 0.06) c h); opacity: 1; }
+.btn--success:hover { background: oklch(0.39 0.150 155); opacity: 1; }
 
 .btn--sm { padding: var(--space-2) var(--space-3); font-size: var(--text-xs); }
 .btn--lg { padding: var(--space-4) var(--space-8); font-size: var(--text-md); }
