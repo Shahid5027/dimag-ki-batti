@@ -90,7 +90,6 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-
   transition: background-color var(--duration-slow) var(--ease-out);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  background-color: oklch(0.975 0.005 80 / 0.90);
 }
 
 .nav-brand {
@@ -109,6 +108,11 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-
   align-items: center;
   gap: var(--space-1);
   flex: 1;
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
 }
 .nav-link {
   font-size: var(--text-sm);
@@ -130,6 +134,42 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-
 }
 
 .nav-divider { width: 1px; height: 20px; background: var(--border); }
+
+/* ── MOBILE MENU TOGGLE ── */
+.nav-mobile-toggle {
+  display: none;
+  width: 36px;
+  height: 36px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid var(--border);
+  background: transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color var(--duration-fast), border-color var(--duration-fast);
+}
+.nav-mobile-toggle:hover {
+  background-color: var(--muted);
+  border-color: var(--foreground);
+}
+.nav-mobile-toggle-line {
+  width: 18px;
+  height: 2px;
+  background-color: var(--foreground);
+  border-radius: 1px;
+  transition: transform var(--duration-fast), opacity var(--duration-fast);
+}
+.nav-mobile-toggle[aria-expanded="true"] .nav-mobile-toggle-line:nth-child(1) {
+  transform: rotate(45deg) translate(8px, 8px);
+}
+.nav-mobile-toggle[aria-expanded="true"] .nav-mobile-toggle-line:nth-child(2) {
+  opacity: 0;
+}
+.nav-mobile-toggle[aria-expanded="true"] .nav-mobile-toggle-line:nth-child(3) {
+  transform: rotate(-45deg) translate(7px, -7px);
+}
 
 /* ── ROLE BADGE ── */
 .role-badge {
@@ -618,8 +658,56 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-
 /* ── RESPONSIVE ── */
 @media (max-width: 768px) {
   .container { padding: 0 var(--space-4); }
-  .nav { padding: 0 var(--space-4); gap: var(--space-3); }
-  .nav-links { display: none; }
+  
+  .nav {
+    padding: 0 var(--space-4);
+    gap: var(--space-2);
+  }
+  
+  .nav-mobile-toggle {
+    display: flex;
+    order: 2;
+  }
+  
+  .nav-brand {
+    order: 1;
+    flex: 1;
+  }
+  
+  .nav-right {
+    order: 3;
+    margin-left: 0;
+    gap: var(--space-2);
+  }
+  
+  .nav-links {
+    position: absolute;
+    top: var(--nav-h);
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--background);
+    border-bottom: 1px solid var(--border);
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height var(--duration-base) var(--ease-out);
+    z-index: 99;
+  }
+  
+  .nav-links--open {
+    max-height: 400px;
+  }
+  
+  .nav-link {
+    padding: var(--space-3) var(--space-4);
+    border-radius: 0;
+  }
+  
+  .role-badge {
+    display: none;
+  }
+  
   .modal { padding: var(--space-6); margin: var(--space-4); }
   .toast-container { right: var(--space-4); left: var(--space-4); max-width: none; }
 }

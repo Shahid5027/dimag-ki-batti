@@ -7,8 +7,15 @@
     Campus<span>.</span>
   </a>
 
+  {# Mobile menu toggle #}
+  <button class="nav-mobile-toggle" id="nav-mobile-toggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="nav-links">
+    <span class="nav-mobile-toggle-line"></span>
+    <span class="nav-mobile-toggle-line"></span>
+    <span class="nav-mobile-toggle-line"></span>
+  </button>
+
   {# Module links — role-aware #}
-  <div class="nav-links" role="list">
+  <div class="nav-links" id="nav-links" role="list">
 
     {% if session.get('role') in ['admin', 'faculty'] %}
     <a href="/attendance/generate" class="nav-link {% if request.path == '/attendance/generate' %}active{% endif %}" role="listitem">
@@ -69,3 +76,28 @@
     </a>
   </div>
 </nav>
+
+<script>
+(function initNavMobileMenu() {
+  const toggle = document.getElementById('nav-mobile-toggle');
+  const navLinks = document.getElementById('nav-links');
+  
+  if (!toggle || !navLinks) return;
+  
+  toggle.addEventListener('click', function() {
+    const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+    toggle.setAttribute('aria-expanded', !isExpanded);
+    navLinks.classList.toggle('nav-links--open');
+  });
+  
+  // Close menu when a link is clicked
+  const links = navLinks.querySelectorAll('a');
+  links.forEach(link => {
+    link.addEventListener('click', function() {
+      toggle.setAttribute('aria-expanded', 'false');
+      navLinks.classList.remove('nav-links--open');
+    });
+  });
+})();
+</script>
+

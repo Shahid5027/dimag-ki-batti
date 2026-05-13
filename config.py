@@ -18,7 +18,7 @@ load_dotenv()
 #   "gemini-2.0-flash-lite"     ← Cheaper, lighter tasks
 #   "gemini-1.5-flash"          ← Fallback if 2.0 unavailable
 #   "gemini-2.5-flash-preview-05-20"  ← Latest preview (may be busy)
-GEMINI_MODEL = "gemini-2.0-flash"
+GEMINI_MODEL = "gemini-2.5-flash"
 
 # ── API Key ───────────────────────────────────────────────
 # Loaded from .env file (GEMINI_API_KEY=your_key_here)
