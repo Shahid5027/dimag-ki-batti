@@ -334,6 +334,9 @@
         <button onclick="showSection('mix')" id="nav-mix" class="app-nav-btn">
           ▤ The Mix
         </button>
+        <button onclick="showSection('notes')" id="nav-notes" class="app-nav-btn">
+          📄 Detailed Notes
+        </button>
         <button onclick="showSection('xray')" id="nav-xray" class="app-nav-btn">
           ◧ X-Ray Mode
         </button>
@@ -407,25 +410,27 @@
             <form id="form-youtube" onsubmit="handleForm(event)">
               <input type="hidden" name="source_type" value="youtube">
               <div class="form-group" style="margin-bottom:var(--space-6);">
-                <input name="url" type="url" class="input" placeholder="Paste YouTube Link here..." required style="padding:var(--space-4); font-size:var(--text-lg);">
+                <input name="url" type="url" id="yt-url-input" class="input" placeholder="Paste YouTube Link here..." required style="padding:var(--space-4); font-size:var(--text-lg);">
               </div>
               <div class="flex gap-4">
                 <button type="submit" onclick="setMode('standard')" class="btn btn--primary" style="flex:1; padding:var(--space-4);">Standard Mix</button>
                 <button type="submit" onclick="setMode('layered')" class="btn btn--muted" style="flex:1; padding:var(--space-4);">X-Ray Mode</button>
+                <button type="submit" onclick="setMode('notes')" class="btn btn--muted" style="flex:1; padding:var(--space-4);">Detailed Notes</button>
               </div>
             </form>
             
             <!-- PDF Form -->
             <form id="form-pdf" class="hidden" onsubmit="handleForm(event)">
               <input type="hidden" name="source_type" value="pdf">
-              <div class="drop-zone" style="margin-bottom:var(--space-6);">
-                <input name="file" type="file" accept=".pdf" style="position:absolute; opacity:0; width:100%; height:100%; top:0; left:0; cursor:pointer;" required>
+              <div class="drop-zone" id="drop-zone-pdf" style="margin-bottom:var(--space-6); position:relative; cursor:pointer;" onclick="document.getElementById('pdf-file-input').click()">
+                <input id="pdf-file-input" name="file" type="file" accept=".pdf" style="display:none;" required onchange="updateDropZoneLabel(this)">
                 <div class="drop-zone-icon">⇪</div>
-                <div class="drop-zone-text">Click or drag to Upload PDF</div>
+                <div class="drop-zone-text" id="drop-zone-label">Click or drag to Upload PDF</div>
               </div>
               <div class="flex gap-4">
                 <button type="submit" onclick="setMode('standard')" class="btn btn--primary" style="flex:1; padding:var(--space-4);">Standard Mix</button>
                 <button type="submit" onclick="setMode('layered')" class="btn btn--muted" style="flex:1; padding:var(--space-4);">X-Ray Mode</button>
+                <button type="button" onclick="setMode('notes'); handleForm(event)" class="btn btn--muted" style="flex:1; padding:var(--space-4);">Detailed Notes</button>
               </div>
             </form>
             
@@ -508,6 +513,25 @@
           </div>
         </section>
 
+        <!-- Detailed Notes Section -->
+        <section id="section-notes" class="section-wrap hidden">
+          <div style="text-align:center; margin-bottom:var(--space-8);">
+            <span class="badge badge--success">AI Study Notes</span>
+            <h2 style="margin-top:var(--space-2);">Detailed Notes</h2>
+            <p class="text-muted" style="margin-top:var(--space-2);">Generate notes from your source, or go back to Dashboard to upload material first.</p>
+          </div>
+          <div id="notes-loader" class="loader-wrap hidden">
+            <div class="spinner"></div>
+            <div class="loader-text">Generating detailed notes...</div>
+          </div>
+          <div id="notes-pdf-embed" class="hidden" style="margin-bottom:var(--space-6);">
+            <div class="card" style="padding:0; overflow:hidden; height:70vh;">
+              <iframe id="notes-pdf-iframe" src="" style="width:100%; height:100%; border:none;"></iframe>
+            </div>
+          </div>
+          <div id="notes-content" class="flex flex-col gap-6"></div>
+        </section>
+
         <!-- Quiz Section -->
         <section id="section-quiz" class="section-wrap hidden">
           <div style="text-align:center; margin-bottom:var(--space-8);">
@@ -562,7 +586,7 @@
     const fmt = (t) => t ? t.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>') : '';
 
     function showSection(id) {
-      ['dashboard','xray','mix','quiz','map'].forEach(s => {
+      ['dashboard','xray','mix','quiz','map','notes'].forEach(s => {
         const el = document.getElementById(`section-${s}`);
         if(el) el.classList.add('hidden');
         const nav = document.getElementById(`nav-${s}`);
@@ -573,32 +597,73 @@
       const activeNav = document.getElementById(`nav-${id}`);
       if(activeNav) activeNav.classList.add('active');
       
-      const titles = { dashboard: 'Dashboard', mix: 'The Mix', xray: 'X-Ray Mode', quiz: 'Quiz Arena', map: 'Mind Map' };
+      const titles = { dashboard: 'Dashboard', mix: 'The Mix', xray: 'X-Ray Mode', quiz: 'Quiz Arena', map: 'Mind Map', notes: 'Detailed Notes' };
       document.getElementById('header-title').innerText = titles[id] || '';
     }
     window.showSection = showSection;
 
     function switchTab(t) {
       ['youtube','pdf','text','gemini'].forEach(x => {
-        document.getElementById(`form-${x}`).classList.add('hidden');
-        document.getElementById(`tab-btn-${x}`).classList.remove('active');
+        const f = document.getElementById(`form-${x}`);
+        const b = document.getElementById(`tab-btn-${x}`);
+        if(f) f.classList.add('hidden');
+        if(b) b.classList.remove('active');
       });
-      document.getElementById(`form-${t}`).classList.remove('hidden');
-      document.getElementById(`tab-btn-${t}`).classList.add('active');
+      const activeForm = document.getElementById(`form-${t}`);
+      const activeBtn = document.getElementById(`tab-btn-${t}`);
+      if(activeForm) activeForm.classList.remove('hidden');
+      if(activeBtn) activeBtn.classList.add('active');
     }
     window.switchTab = switchTab;
+
+    function updateDropZoneLabel(input) {
+      const label = document.getElementById('drop-zone-label');
+      if(label && input.files.length > 0) {
+        label.textContent = '📄 ' + input.files[0].name;
+      }
+    }
+    window.updateDropZoneLabel = updateDropZoneLabel;
+
+    let lastPdfFile = null;
+    let lastPdfUrl = null;
 
     function setMode(m) { currentGenMode = m; }
     window.setMode = setMode;
 
     async function handleForm(e) {
       e.preventDefault();
-      document.getElementById('loader').classList.remove('hidden');
-      const fd = new FormData(e.target);
+      const form = e.target || e.currentTarget || e;
+      const fd = new FormData(form instanceof HTMLFormElement ? form : form.closest('form'));
       fd.append('style', document.getElementById('global-persona').value);
       fd.append('q_count', document.getElementById('global-qcount').value);
       fd.append('gen_mode', currentGenMode);
 
+      // Track uploaded PDF for notes section
+      const pdfInput = document.getElementById('pdf-file-input');
+      if(pdfInput && pdfInput.files.length > 0) {
+        lastPdfFile = pdfInput.files[0];
+        lastPdfUrl = URL.createObjectURL(lastPdfFile);
+      }
+
+      // Notes mode: skip AI, show PDF embed or generate text notes
+      if(currentGenMode === 'notes') {
+        const srcType = fd.get('source_type');
+        showSection('notes');
+        if(srcType === 'pdf' && lastPdfUrl) {
+          document.getElementById('notes-pdf-embed').classList.remove('hidden');
+          document.getElementById('notes-pdf-iframe').src = lastPdfUrl;
+          document.getElementById('notes-content').innerHTML = '';
+        } else {
+          document.getElementById('notes-pdf-embed').classList.add('hidden');
+          document.getElementById('notes-loader').classList.remove('hidden');
+          document.getElementById('notes-content').innerHTML = '';
+          await generateAINotes(fd);
+          document.getElementById('notes-loader').classList.add('hidden');
+        }
+        return;
+      }
+
+      document.getElementById('loader').classList.remove('hidden');
       try {
         const res = await fetch('/study/generate', {method:'POST', body:fd});
         const d = await res.json();
@@ -623,6 +688,27 @@
       }
     }
     window.handleForm = handleForm;
+
+    async function generateAINotes(fd) {
+      fd.set('gen_mode', 'notes');
+      try {
+        const res = await fetch('/study/notes', {method:'POST', body:fd});
+        const d = await res.json();
+        const nc = document.getElementById('notes-content');
+        if(d.status === 'success' && d.notes) {
+          nc.innerHTML = d.notes.map(sec => `
+            <div class="card">
+              <h2 class="card-title" style="font-size:var(--text-2xl); border-bottom:1px solid var(--border); padding-bottom:var(--space-4); margin-bottom:var(--space-6);">${sec.heading}</h2>
+              ${sec.points.map(p => `<div style="margin-bottom:var(--space-4); padding:var(--space-4); background:var(--muted); border-left:3px solid var(--accent); border-radius:var(--radius-sm);"><strong>${p.title}:</strong> ${fmt(p.detail)}</div>`).join('')}
+            </div>`).join('');
+          sessId = d.session_id;
+        } else {
+          nc.innerHTML = `<div class="flash-alert flash-alert--error">Error: ${d.message || 'Could not generate notes.'}</div>`;
+        }
+      } catch(err) {
+        document.getElementById('notes-content').innerHTML = `<div class="flash-alert flash-alert--error">Server Error: ${err.message}</div>`;
+      }
+    }
 
     function renderMix(d, vid) {
       document.getElementById('summary-list').innerHTML = d.summary.map(s=>`<li style="margin-bottom:var(--space-2)">${fmt(s)}</li>`).join('');

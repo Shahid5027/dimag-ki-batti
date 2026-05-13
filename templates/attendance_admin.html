@@ -53,16 +53,47 @@
 
           <div class="flex items-center justify-between" style="margin-bottom:var(--space-4);">
             <h3 style="font-size:var(--text-xl);">Device &amp; Session Reset</h3>
+            <span class="badge badge--warning">Anti-Fraud</span>
           </div>
-          <div class="card">
+          <div class="card" style="margin-bottom:var(--space-4);">
+            <p class="text-sm text-muted" style="margin-bottom:var(--space-4);">Each student is permanently bound to their first login device. Unbind a device below to allow a student to log in from a new device.</p>
             <form action="/attendance/admin/reset_device" method="POST" style="display:flex; gap:var(--space-4); align-items:flex-end; flex-wrap:wrap;">
               <div class="form-group" style="flex:1; min-width:200px;">
-                <label class="form-label" for="reset_usn">USN</label>
+                <label class="form-label" for="reset_usn">USN (manual unbind)</label>
                 <input class="input" type="text" id="reset_usn" name="usn" placeholder="e.g. 1AM24EC143" required>
               </div>
               <button type="submit" class="btn btn--destructive">Remove Device Binding</button>
             </form>
-            <p class="text-sm text-muted" style="margin-top:var(--space-2);">This deletes the login cookie binding, allowing the student to log in from a new device.</p>
+          </div>
+
+          <!-- Device Bindings Table -->
+          <div class="card" style="padding:0; overflow:hidden;">
+            <div style="padding:var(--space-4) var(--space-6); border-bottom:1px solid var(--border);">
+              <span class="text-label">Bound Devices</span>
+            </div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr><th>USN</th><th>Device ID</th><th>Action</th></tr>
+                </thead>
+                <tbody>
+                  {% for d in device_rows %}
+                  <tr>
+                    <td style="font-family:var(--font-mono); font-size:var(--text-sm);">{{ d['usn'] }}</td>
+                    <td class="text-muted" style="font-family:var(--font-mono); font-size:var(--text-xs); word-break:break-all;">{{ d['device_id'][:16] }}...</td>
+                    <td>
+                      <form action="/attendance/admin/reset_device" method="POST" style="display:inline;">
+                        <input type="hidden" name="usn" value="{{ d['usn'] }}">
+                        <button type="submit" class="btn btn--destructive" style="padding:4px 12px; font-size:var(--text-xs);">⛓ Unbind</button>
+                      </form>
+                    </td>
+                  </tr>
+                  {% else %}
+                  <tr><td colspan="3"><div class="empty-state" style="padding:var(--space-6);"><div class="empty-state-icon">⛓</div><h3 class="empty-state-title" style="font-size:var(--text-base);">No devices bound yet</h3></div></td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
 

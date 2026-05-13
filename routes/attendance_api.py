@@ -644,8 +644,11 @@ def admin():
                  timestamp DESC""")
     leave_rows = c.fetchall()
 
+    c.execute('SELECT device_id, usn FROM Devices ORDER BY usn')
+    device_rows = c.fetchall()
+
     conn.close()
-    return render_template('attendance_admin.html', att_rows=att_rows, leave_rows=leave_rows)
+    return render_template('attendance_admin.html', att_rows=att_rows, leave_rows=leave_rows, device_rows=device_rows)
 
 @attendance_bp.route("/admin/register_student", methods=["POST"])
 def register_student():

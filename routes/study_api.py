@@ -223,6 +223,69 @@ def generate():
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
+@study_bp.route('/notes', methods=['POST'])
+def generate_notes():
+    """Generate detailed structured study notes from source material."""
+    try:
+        source_type = request.form.get('source_type', '').strip().lower()
+        style = request.form.get('style', 'Standard Tutor')
+
+        raw_text_full = ""
+        video_id = None
+
+        if source_type == 'youtube':
+            url = request.form.get('url', '')
+            video_id = extract_video_id(url)
+            if not video_id:
+                raise ValueError("Could not extract video ID.")
+            transcript_data = get_transcript_data(video_id)
+            raw_text_full = " ".join([item['text'] for item in transcript_data])
+        elif source_type == 'pdf':
+            if 'file' not in request.files:
+                raise ValueError("No file uploaded")
+            f = request.files['file']
+            if f.filename == '':
+                raise ValueError("No selected file")
+            save_path = os.path.join(UPLOAD_DIR, f.filename)
+            f.save(save_path)
+            raw_text_full = extract_pdf_text(save_path)
+        elif source_type in ['text', 'gemini']:
+            raw_text_full = request.form.get('text_content', '').strip()
+
+        if not raw_text_full:
+            raise ValueError("No text could be extracted from the source.")
+
+        schema = '''
+        [
+          {
+            "heading": "Topic Heading",
+            "points": [
+              { "title": "Key Concept", "detail": "Detailed explanation of this concept..." }
+            ]
+          }
+        ]
+        '''
+        notes_prompt = (
+            f"Persona: {style}\n"
+            f"Task: Generate comprehensive, exam-ready detailed notes from the content below.\n"
+            f"Output: VALID JSON only. No markdown. Each heading covers a major topic with 3-6 key points.\n"
+            f"Content:\n{raw_text_full[:40000]}\n\n"
+            f"Schema:\n{schema}"
+        )
+
+        response_text = call_gemini(notes_prompt, json_mode=True)
+        notes_data = parse_gemini_json(response_text)
+
+        session_id = str(uuid.uuid4())
+        CONTENT_CACHE[session_id] = {"text": raw_text_full, "meta": {"source": source_type, "style": style}}
+
+        return jsonify({"status": "success", "notes": notes_data, "session_id": session_id})
+
+    except Exception as e:
+        print(f"SERVER ERROR in /notes: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
 @study_bp.route('/chat', methods=['POST'])
 def chat():
     data = request.json

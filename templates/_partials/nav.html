@@ -70,10 +70,16 @@
       ◑
     </button>
 
-    {# Profile / logout #}
+    {# Profile / logout — students CANNOT log out #}
+    {% if session.get('role') == 'student' %}
+    <span class="btn btn--ghost btn--sm" style="opacity:0.5; cursor:not-allowed;" title="Students cannot log out from this device.">
+      🔒 Locked
+    </span>
+    {% else %}
     <a href="/logout" class="btn btn--ghost btn--sm" aria-label="Sign out">
       Sign out
     </a>
+    {% endif %}
   </div>
 </nav>
 

@@ -52,23 +52,38 @@
           <table class="table">
             <thead>
               <tr>
+                <th>#</th>
                 <th>Session</th>
+                <th>Date</th>
+                <th>Time</th>
                 <th>Status</th>
-                <th>Date &amp; Time</th>
+                <th>Running %</th>
               </tr>
             </thead>
             <tbody>
+              {% set ns = namespace(count=0) %}
               {% for row in rows %}
+              {% set ns.count = ns.count + 1 %}
+              {% set run_pct = ((ns.count / total * 100) | round(0)) if total > 0 else 0 %}
+              {% set ts_parts = row['timestamp'].split(' ') %}
               <tr>
+                <td class="text-muted" style="font-family:var(--font-mono); font-size:var(--text-xs);">{{ ns.count }}</td>
                 <td style="font-weight:500;">{{ row['session'] }}</td>
+                <td class="text-muted" style="font-family:var(--font-mono); font-size:var(--text-xs);">{{ ts_parts[0] if ts_parts|length > 0 else '—' }}</td>
+                <td class="text-muted" style="font-family:var(--font-mono); font-size:var(--text-xs);">{{ ts_parts[1][:5] if ts_parts|length > 1 else '—' }}</td>
                 <td><span class="badge badge--success">Present</span></td>
-                <td class="text-muted" style="font-family:var(--font-mono); font-size:var(--text-xs);">{{ row['timestamp'] }}</td>
+                <td>
+                  <span style="font-family:var(--font-mono); font-size:var(--text-xs);
+                    color:{% if run_pct >= 75 %}var(--success){% elif run_pct >= 50 %}var(--warning){% else %}var(--destructive){% endif %};">
+                    {{ run_pct }}%
+                  </span>
+                </td>
               </tr>
               {% else %}
               <tr>
-                <td colspan="3">
+                <td colspan="6">
                   <div class="empty-state">
-                    <div class="empty-state-icon">⬡</div>
+                    <div class="empty-state-icon">⧆</div>
                     <h3 class="empty-state-title">No Records Found</h3>
                     <p class="empty-state-desc">Scan a class QR code to mark your first attendance.</p>
                   </div>
